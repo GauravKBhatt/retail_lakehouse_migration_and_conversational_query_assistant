@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  nessie:
+    image: projectnessie/nessie:0.76.0
+    ports:
+      - "19120:19120"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: lakehouse
+      POSTGRES_DB: vectors
+    ports:
+      - "5432:5432"
+
+  marquez:
+    image: marquezproject/marquez:latest
+    ports:
+      - "5000:5000"
+      - "5001:5001"
