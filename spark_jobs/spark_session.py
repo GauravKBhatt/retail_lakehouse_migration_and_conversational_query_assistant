@@ -2,6 +2,10 @@ import glob
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
+# JVM is launched by py4j at getorcreate() and .config(memory) happens later thus, the java heap memory size remains the same. thus, setting the memory as a environment setting. 
+os.environ["PYSPARK_SUBMIT_ARGS"] = "--driver-memory 4g --executor-memory 4g pyspark-shell"
+
 from pyspark.sql import SparkSession
 
 # this is for not lettings the spark download jars again and again. it can be skipped but spark will re-download jars everytime
