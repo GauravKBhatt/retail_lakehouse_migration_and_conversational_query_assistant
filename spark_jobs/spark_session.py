@@ -26,6 +26,8 @@ def get_spark(app_name: str = "RetailLakehouse") -> SparkSession:
     return (
         SparkSession.builder
         .appName(app_name)
+        .config("spark.driver.memory", "4g")
+        .config("spark.driver.maxResultSize", "2g")
         .config("spark.jars", _resolve_jars())
         .config(
             "spark.sql.extensions",
