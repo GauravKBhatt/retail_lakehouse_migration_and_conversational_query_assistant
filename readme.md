@@ -43,3 +43,84 @@ BatchScan nessie.retail.fact_sales[order_date#20, total_amount#26] ...
 | Pruned (Jan 2024 only)  | 31            |
 
 Iceberg's hidden `days(order_date)` partition transform lets the query planner push the date filter down to file-level pruning without needing an explicit partition column in the WHERE clause — confirmed by the drop from 730 files to 31 files (~4% of the table scanned).
+
+## Issue Log
+
+### 1. Nessie catalog lost state on every restart
+
+**Problem:** The Nessie server was running with its default in-memory version store, and the Iceberg warehouse was configured to write to `file:///tmp/iceberg_warehouse`, which Windows resolves to `AppData\Local\Temp`. Any container restart wiped Nessie's catalog (`SHOW DATABASES IN nessie` returned empty), and the underlying Parquet/metadata files in the Windows temp directory were also gone — a full reset with no recovery path.
+
+**Root cause:** Two separate issues compounding:
+- Nessie's Docker image (`projectnessie/nessie:0.76.0`) defaults to `VERSION_STORE_TYPE=IN_MEMORY`, which never persists to disk.
+- The Iceberg warehouse path pointed at genuinely temporary OS storage, subject to cleanup at any time.
+
+**Fix:**
+- Added a `postgres` database (`nessie`) to the existing Postgres container and configured Nessie to use it as a JDBC-backed version store, since RocksDB isn't a supported store type in the official Nessie image (confirmed via the `Installed features` line in the startup logs — only `jdbc-postgresql`, `mongodb-client`, `amazon-dynamodb`, `cassandra-client`, and `google-cloud-bigtable` are available).
+- Updated `spark_session.py` to point `spark.sql.catalog.nessie.warehouse` at a durable path on the project drive instead of `/tmp`.
+
+**Verification:** Ran `docker compose restart nessie`, then re-queried `SHOW TABLES IN nessie.retail` — all five tables (`dim_product`, `dim_date`, `dim_store`, `dim_customer`, `fact_sales`) persisted across the restart, confirming the fix.
+
+---
+
+### 2. `CAST` required for date literals in `schema_evolution.py`
+
+**Problem:** The `INSERT INTO ... VALUES (..., '2024-06-15', ...)` statement failed with:
+```
+AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot safely cast `order_date` "STRING" to "DATE".
+```
+
+**Root cause:** Under Spark's ANSI type-checking mode, a bare string literal in an `INSERT ... VALUES` is typed as `STRING`, and Spark will not implicitly widen it to `DATE` for an unsafe cast — unlike older Spark versions, which allowed this coercion silently.
+
+**Fix:** Explicitly cast the literal:
+```sql
+INSERT INTO nessie.retail.fact_sales
+VALUES (9999999, CAST('2024-06-15' AS DATE), 1, 1, 1, 2, 49.99, 99.98, 0.10)
+```
+
+---
+
+## Partition & Schema Evolution Proofs
+
+### Schema Evolution via Field IDs
+
+**Before adding `discount_pct`:**
+```
++--------------+----------------+
+|      col_name|       data_type|
++--------------+----------------+
+|      order_id|          bigint|
+|    order_date|            date|
+|    product_id|          bigint|
+|      store_id|          bigint|
+|   customer_id|          bigint|
+|      quantity|             int|
+|    unit_price|          double|
+|  total_amount|          double|
++--------------+----------------+
+```
+
+**After `ALTER TABLE ... ADD COLUMN discount_pct DOUBLE`, querying pre-existing rows:**
+```
++--------+------------+------------+
+|order_id|total_amount|discount_pct|
++--------+------------+------------+
+|    1001|      158.55|        NULL|
+|    1554|      1892.8|        NULL|
+|    2407|     1335.15|        NULL|
+|    2553|       489.3|        NULL|
+|    3507|      2053.1|        NULL|
++--------+------------+------------+
+```
+Old data files have no `discount_pct` column on disk at all — Iceberg resolves it as `NULL` via Field ID mapping rather than erroring or misaligning columns by position.
+
+**After inserting a new row with `discount_pct` populated, comparing old vs. new:**
+```
++--------+------------+
+|order_id|discount_pct|
++--------+------------+
+| 9999999|         0.1|
+|       1|        NULL|
++--------+------------+
+```
+
+This confirms Iceberg's schema evolution model: old rows (`order_id=1`) and new rows (`order_id=9999999`) coexist under a single evolved schema, with no rewrite of historical data files required.
