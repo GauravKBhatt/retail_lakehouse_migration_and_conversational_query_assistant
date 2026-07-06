@@ -11,6 +11,7 @@ from agent.tools.lakehouse_query import (
     SYSTEM_PROMPT,
     execute_query,
 )
+from agent.tools.time_travel import TIME_TRAVEL_TOOL, execute_time_travel_query
 
 app = FastAPI(title="Retail Lakehouse Agent")
 
@@ -26,7 +27,7 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 model = genai.GenerativeModel(
     model_name="gemini-2.5-flash",
     system_instruction=SYSTEM_PROMPT,
-    tools=[LAKEHOUSE_QUERY_TOOL],
+    tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL],
 )
 
 
@@ -63,10 +64,30 @@ def to_gemini_history(messages: List[Message]) -> List[dict]:
     ]
 
 
+def run_tool(name: str, args: dict) -> dict:
+    """Dispatch a Gemini function call to the matching tool executor.
+
+    Adding a new tool later just means adding another branch here plus
+    including its declaration in the model's tools list above.
+    """
+    if name == "run_lakehouse_query":
+        return execute_query(args["sql"])
+
+    if name == "run_time_travel_query":
+        return execute_time_travel_query(
+            sql=args["sql"],
+            as_of_date=args.get("as_of_date"),
+            snapshot_id=args.get("snapshot_id"),
+        )
+
+    return {"error": f"Unknown tool: {name}"}
+
+
 @app.post("/chat")
 async def chat(req: ChatRequest) -> dict[str, str]:
-    """Run the user's message through Gemini, executing the lakehouse
-    query tool if the model asks for it, and returning the final answer.
+    """Run the user's message through Gemini, executing whichever tool
+    the model calls (lakehouse query or time travel query) until it
+    returns a final plain text answer.
     """
     history = to_gemini_history(req.messages[:-1])
     chat_session = model.start_chat(history=history)
@@ -74,8 +95,6 @@ async def chat(req: ChatRequest) -> dict[str, str]:
     latest_message = req.messages[-1].content
     response = chat_session.send_message(latest_message)
 
-    # Handle tool use loop: keep executing tool calls until Gemini
-    # returns a plain text answer instead of another function_call.
     while True:
         function_call = None
         for part in response.candidates[0].content.parts:
@@ -86,15 +105,14 @@ async def chat(req: ChatRequest) -> dict[str, str]:
         if function_call is None:
             break
 
-        sql = function_call.args["sql"]
-        result = execute_query(sql)
+        result = run_tool(function_call.name, dict(function_call.args))
 
         response = chat_session.send_message(
             genai.protos.Content(
                 parts=[
                     genai.protos.Part(
                         function_response=genai.protos.FunctionResponse(
-                            name="run_lakehouse_query",
+                            name=function_call.name,
                             response={"result": result},
                         )
                     )
