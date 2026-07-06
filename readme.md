@@ -124,3 +124,32 @@ Old data files have no `discount_pct` column on disk at all — Iceberg resolves
 ```
 
 This confirms Iceberg's schema evolution model: old rows (`order_id=1`) and new rows (`order_id=9999999`) coexist under a single evolved schema, with no rewrite of historical data files required.
+
+## Time Travel Proof
+
+Iceberg records every write as an immutable snapshot. The same query run against two different snapshots of `fact_sales` returns different results, proving real historical state is preserved — not just current-state metadata.
+
+| Snapshot                                      | COUNT(*)  | SUM(total_amount)     |
+|------------------------------------------------|-----------|-------------------------|
+| Current (latest, snapshot `5631275555345608`)   | 1,200,002 | 1,665,838,890.50        |
+| AS OF SNAP_BEFORE (snapshot `1711499913188484340`) | 1,200,000 | 1,665,838,690.53     |
+
+The extra 2 rows and the total difference come from two inserts made after `SNAP_BEFORE`: one during the schema evolution demo (Task 6) and one made in this task to create `SNAP_AFTER`.
+
+### Time travel by timestamp
+
+Iceberg also supports `TIMESTAMP AS OF`, resolving to whichever snapshot was current at a given commit time (not to be confused with any date column inside the data, like `order_date`):
+
+```sql
+SELECT COUNT(*) FROM nessie.retail.fact_sales
+TIMESTAMP AS OF '2026-07-06 09:59:00.678'
+```
+
+Result: `1,200,000` rows — matching `SNAP_BEFORE` exactly, confirming both time-travel mechanisms (`VERSION AS OF` and `TIMESTAMP AS OF`) resolve to the same consistent historical state.
+
+Full snapshot history, including deletes, is visible via:
+```sql
+SELECT snapshot_id, committed_at, summary
+FROM nessie.retail.fact_sales.snapshots
+ORDER BY committed_at
+```
