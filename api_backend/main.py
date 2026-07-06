@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from api_backend.tools.lakehouse_query import (
+from agent.tools.lakehouse_query import (
     LAKEHOUSE_QUERY_TOOL,
     SYSTEM_PROMPT,
     execute_query,
