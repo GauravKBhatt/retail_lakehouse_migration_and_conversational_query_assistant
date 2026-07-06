@@ -16,6 +16,11 @@ JAR_DIR = os.environ.get(
 
 
 def _resolve_jars(jar_dir: str = JAR_DIR) -> str:
+    """Return a comma-separated list of all jar files found under jar_dir.
+
+    Used to point spark.jars at locally cached jars instead of letting
+    Spark re-resolve spark.jars.packages from Maven on every run.
+    """
     jars = glob.glob(os.path.join(jar_dir, "**", "*.jar"), recursive=True)
     if not jars:
         raise FileNotFoundError(
@@ -27,6 +32,12 @@ def _resolve_jars(jar_dir: str = JAR_DIR) -> str:
 
 
 def get_spark(app_name: str = "RetailLakehouse") -> SparkSession:
+    """Build (or fetch) a SparkSession wired up with Iceberg and Nessie.
+
+    Loads jars from local disk instead of Maven, and points the nessie
+    catalog at the local Nessie server and a durable Iceberg warehouse
+    directory.
+    """
     return (
         SparkSession.builder
         .appName(app_name)
@@ -58,7 +69,7 @@ def get_spark(app_name: str = "RetailLakehouse") -> SparkSession:
         )
         .config(
             "spark.sql.catalog.nessie.warehouse",
-            "file:///tmp/iceberg_warehouse"
+            "file:///D:/retail_lakehouse_migration_and_conversational_query_assistant/iceberg_warehouse"
         )
         .getOrCreate()
     )
