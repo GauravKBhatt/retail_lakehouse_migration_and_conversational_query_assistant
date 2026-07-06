@@ -5,6 +5,14 @@ services:
     image: projectnessie/nessie:0.76.0
     ports:
       - "19120:19120"
+    environment:
+      nessie.version.store.type: JDBC
+      quarkus.datasource.db-kind: postgresql
+      quarkus.datasource.username: postgres
+      quarkus.datasource.password: lakehouse
+      quarkus.datasource.jdbc.url: jdbc:postgresql://postgres:5432/nessie
+    depends_on:
+      - postgres
 
   redis:
     image: redis:7-alpine
@@ -16,11 +24,17 @@ services:
     environment:
       POSTGRES_PASSWORD: lakehouse
       POSTGRES_DB: vectors
+      POSTGRES_MULTIPLE_DATABASES: nessie
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   marquez:
     image: marquezproject/marquez:latest
     ports:
       - "5000:5000"
       - "5001:5001"
+
+volumes:
+  postgres_data:
