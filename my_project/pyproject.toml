@@ -9,6 +9,7 @@ dependencies = [
     "chromadb>=1.5.9",
     "dbt-spark>=1.10.3",
     "fastapi>=0.138.1",
+    "google-generativeai>=0.8.6",
     "great-expectations>=1.18.2",
     "openlineage-python>=1.50.0",
     "pyiceberg[spark]>=0.11.1",
