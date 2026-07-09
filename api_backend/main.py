@@ -12,6 +12,7 @@ from agent.tools.lakehouse_query import (
     execute_query,
 )
 from agent.tools.time_travel import TIME_TRAVEL_TOOL, execute_time_travel_query
+from agent.tools.explain_query import EXPLAIN_TOOL, explain_plan
 
 app = FastAPI(title="Retail Lakehouse Agent")
 
@@ -27,7 +28,7 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 model = genai.GenerativeModel(
     model_name="gemini-2.5-flash",
     system_instruction=SYSTEM_PROMPT,
-    tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL],
+    tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL, EXPLAIN_TOOL],
 )
 
 
@@ -79,6 +80,9 @@ def run_tool(name: str, args: dict) -> dict:
             as_of_date=args.get("as_of_date"),
             snapshot_id=args.get("snapshot_id"),
         )
+
+    if name == "explain_query_plan":
+        return explain_plan(args["sql"])
 
     return {"error": f"Unknown tool: {name}"}
 
