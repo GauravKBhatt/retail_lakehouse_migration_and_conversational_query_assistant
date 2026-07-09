@@ -1,6 +1,7 @@
 import { useAtom, useSetAtom } from 'jotai'
 import { inputAtom, isTypingAtom } from '../atoms'
-import { useChat, Message } from '../hooks/useChat'
+import { useChat } from '../hooks/useChat'
+import type { Message } from '../hooks/useChat'
 
 interface ChatInputProps {
   messages: Message[]

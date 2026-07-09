@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { ChatWindow } from './components/chatWindow'
 import { ChatInput } from './components/chatInput'
-import { Message } from './hooks/useChat'
 import './App.css'
 
 function App() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const { data: messages = [] } = useQuery({
+    queryKey: ['conversation'],
+    initialData: [],
+  })
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
