@@ -5,6 +5,7 @@ from pyspark.sql import SparkSession
 
 from api_backend.guard import is_safe_query  # stub for now, real guard in Phase 4
 from spark_jobs.spark_session import get_spark
+from api_backend.logger import log_event
 
 SYSTEM_PROMPT = '''
 You are a retail analytics assistant. You have access to these Iceberg tables in the nessie.retail schema:
@@ -65,6 +66,8 @@ def execute_query(sql: str) -> Dict[str, Any]:
     if not is_safe_query(sql):
         return {"error": "Query rejected by safety guard"}
 
+    log_event("sql_execution", {"sql": sql})
+
     spark = get_or_create_spark()
     try:
         df = spark.sql(sql)
@@ -74,8 +77,15 @@ def execute_query(sql: str) -> Dict[str, Any]:
         }
     rows: List = df.limit(100).collect()
 
-    return {
+    result = {
         "columns": df.columns,
         "rows": [[str(value) for value in row] for row in rows],
         "row_count": len(rows),
     }
+
+    log_event("sql_result", {
+        "sql": sql,
+        "row_count": len(rows),
+        "columns": df.columns,
+    })
+    return result
