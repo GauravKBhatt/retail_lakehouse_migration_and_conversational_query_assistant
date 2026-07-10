@@ -1,7 +1,10 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Literal
 
+# importing all the model providers.
 import google.generativeai as genai
+from groq import Groq
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -14,6 +17,65 @@ from agent.tools.lakehouse_query import (
 from agent.tools.time_travel import TIME_TRAVEL_TOOL, execute_time_travel_query
 from agent.tools.explain_query import EXPLAIN_TOOL, explain_plan
 
+# Model configuration
+MODELS = {
+    "gemini-2.5-flash": {"provider": "gemini", "name": "gemini-2.5-flash"},
+    "gemini-1.5-pro": {"provider": "gemini", "name": "gemini-1.5-pro"},
+    "groq-llama3-70b": {"provider": "groq", "name": "llama3-70b-8192"},
+    "groq-llama3-8b": {"provider": "groq", "name": "llama3-8b-8192"},
+    "groq-mixtral": {"provider": "groq", "name": "mixtral-8x7b-32768"},
+    "groq-gemma": {"provider": "groq", "name": "gemma-7b-it"},
+    "groq/gpt-oss-120b": {"provider": "groq", "name": "openai/gpt-oss-120b"}
+}
+
+# Groq tool definitions (OpenAI-compatible format)
+GROQ_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "run_lakehouse_query",
+            "description": "Execute SQL queries against the retail lakehouse",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sql": {"type": "string", "description": "SQL query to execute"}
+                },
+                "required": ["sql"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_time_travel_query",
+            "description": "Execute time travel queries to see historical data",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sql": {"type": "string", "description": "SQL query to execute"},
+                    "as_of_date": {"type": "string", "description": "Date for time travel (YYYY-MM-DD format)"},
+                    "snapshot_id": {"type": "string", "description": "Snapshot ID for time travel"}
+                },
+                "required": ["sql"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "explain_query_plan",
+            "description": "Get a plain-English explanation of how a query will execute",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sql": {"type": "string", "description": "The SQL query to explain"}
+                },
+                "required": ["sql"]
+            }
+        }
+    }
+]
+
 app = FastAPI(title="Retail Lakehouse Agent")
 
 app.add_middleware(
@@ -23,13 +85,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize clients
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-
-model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
-    system_instruction=SYSTEM_PROMPT,
-    tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL, EXPLAIN_TOOL],
-)
+groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 
 class Message(BaseModel):
@@ -44,6 +102,15 @@ class ChatRequest(BaseModel):
 
     messages: List[Message]
     as_of_date: Optional[str] = None  # optional time-travel pin
+    model: str = "gemini-2.5-flash"  # default model
+
+def get_gemini_model(model_name: str):
+    """Get a configured Gemini model."""
+    return genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=SYSTEM_PROMPT,
+        tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL, EXPLAIN_TOOL],
+    )
 
 
 @app.get("/health")
@@ -61,6 +128,14 @@ def to_gemini_history(messages: List[Message]) -> List[dict]:
     role_map = {"user": "user", "assistant": "model"}
     return [
         {"role": role_map.get(m.role, "user"), "parts": [m.content]}
+        for m in messages
+    ]
+
+
+def to_groq_history(messages: List[Message]) -> List[dict]:
+    """Convert our Message list into Groq/OpenAI chat history format."""
+    return [
+        {"role": m.role, "content": m.content}
         for m in messages
     ]
 
@@ -87,12 +162,9 @@ def run_tool(name: str, args: dict) -> dict:
     return {"error": f"Unknown tool: {name}"}
 
 
-@app.post("/chat")
-async def chat(req: ChatRequest) -> dict[str, str]:
-    """Run the user's message through Gemini, executing whichever tool
-    the model calls (lakehouse query or time travel query) until it
-    returns a final plain text answer.
-    """
+async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
+    """Handle chat using Gemini."""
+    model = get_gemini_model(model_name)
     history = to_gemini_history(req.messages[:-1])
     chat_session = model.start_chat(history=history)
 
@@ -125,3 +197,52 @@ async def chat(req: ChatRequest) -> dict[str, str]:
         )
 
     return {"role": "assistant", "content": response.text}
+
+
+async def chat_groq(req: ChatRequest, model_name: str) -> dict[str, str]:
+    """Handle chat using Groq."""
+    messages = to_groq_history(req.messages)
+    
+    response = groq_client.chat.completions.create(
+        model=model_name,
+        messages=messages,
+        tools=GROQ_TOOLS,
+        temperature=0.7,
+    )
+
+    # Handle function calling loop
+    while True:
+        message = response.choices[0].message
+        
+        # If no tool call, return the response
+        if not message.tool_calls:
+            return {"role": "assistant", "content": message.content or ""}
+        
+        # Execute tool calls
+        tool_call = message.tool_calls[0]
+        result = run_tool(tool_call.function.name, tool_call.function.arguments)
+        
+        # Add assistant message and tool response to history
+        messages.append({"role": "assistant", "content": message.content or "", "tool_calls": [tool_call]})
+        messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": str(result)})
+        
+        # Get next response
+        response = groq_client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            tools=GROQ_TOOLS,
+            temperature=0.7,
+        )
+
+
+@app.post("/chat")
+async def chat(req: ChatRequest) -> dict[str, str]:
+    """Route chat request to appropriate provider based on model selection."""
+    config = MODELS.get(req.model, MODELS["gemini-2.5-flash"])
+    
+    if config["provider"] == "gemini":
+        return await chat_gemini(req, config["name"])
+    elif config["provider"] == "groq":
+        return await chat_groq(req, config["name"])
+    else:
+        raise ValueError(f"Unknown provider: {config['provider']}")
