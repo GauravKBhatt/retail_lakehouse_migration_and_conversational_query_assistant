@@ -1,21 +1,43 @@
 from typing import Any, Dict, List
 
 from pyspark.sql import SparkSession
+<<<<<<< HEAD
+=======
+from pyspark.errors.exceptions.captured import AnalysisException
+>>>>>>> feat/gemini-lakehouse-query-tool
 
 from api_backend.guard import is_safe_query  # stub for now, real guard in Phase 4
 from spark_jobs.spark_session import get_spark
 
 SYSTEM_PROMPT = """
+<<<<<<< HEAD
 You are a retail analytics assistant. You have access to these Iceberg tables:
 - nessie.retail.fact_sales (order_id, order_date, product_id, store_id, customer_id, quantity, unit_price, total_amount, discount_pct)
 - nessie.retail.dim_product (product_id, name, category, subcategory, brand, cost_price)
 - nessie.retail.dim_store (store_id, name, city, state, region, store_type)
 - nessie.retail.dim_customer (customer_id, segment, join_date, lifetime_value_bucket)
 - nessie.retail.dim_date (date_id, full_date, year, quarter, month, week, day_of_week)
+=======
+You are a retail analytics assistant. You have access to these Iceberg tables in the nessie.retail schema:
+- fact_sales (order_id, order_date, product_id, store_id, customer_id, quantity, unit_price, total_amount)
+- dim_product (product_id, name, category, subcategory, brand, cost_price)
+- dim_store (store_id, name, city, state, region, store_type)
+- dim_customer (customer_id, segment, join_date, lifetime_value_bucket)
+- dim_date (date_id, full_date, year, quarter, month, week, day_of_week)
+
+IMPORTANT: Always use the exact table names above. Do NOT use variations like sales_facts, product_dim, etc.
+Always qualify table names with the schema: nessie.retail.table_name
+Examples: nessie.retail.fact_sales, nessie.retail.dim_product
+
+>>>>>>> feat/gemini-lakehouse-query-tool
 Always generate standard Spark SQL. Never use INSERT, UPDATE, DELETE, or DROP.
 Limit results to 100 rows unless the user asks for aggregates.
 """
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> feat/gemini-lakehouse-query-tool
 # Gemini function-calling tool declaration (equivalent of Claude's tool schema).
 LAKEHOUSE_QUERY_TOOL = {
     "function_declarations": [
@@ -57,7 +79,16 @@ def execute_query(sql: str) -> Dict[str, Any]:
         return {"error": "Query rejected by safety guard"}
 
     spark = get_or_create_spark()
+<<<<<<< HEAD
     df = spark.sql(sql)
+=======
+    try:
+        df = spark.sql(sql)
+    except AnalysisException as e:
+        return {
+            "error": f"Query failed — table or view not found. Details: {e}"
+        }
+>>>>>>> feat/gemini-lakehouse-query-tool
     rows: List = df.limit(100).collect()
 
     return {
