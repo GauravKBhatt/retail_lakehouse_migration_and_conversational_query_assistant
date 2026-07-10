@@ -1,5 +1,5 @@
-import { useAtom, useSetAtom, useAtomValue } from 'jotai'
-import { inputAtom, isTypingAtom, selectedModelAtom, modelsAtom } from '../atoms'
+import { useAtom, useSetAtom } from 'jotai'
+import { inputAtom, isTypingAtom } from '../atoms'
 import { useChat } from '../hooks/useChat'
 import type { Message } from '../hooks/useChat'
 
@@ -10,8 +10,6 @@ interface ChatInputProps {
 export function ChatInput({ messages }: ChatInputProps) {
   const [input, setInput] = useAtom(inputAtom)
   const setIsTyping = useSetAtom(isTypingAtom)
-  const [selectedModel, setSelectedModel] = useAtom(selectedModelAtom)
-  const models = useAtomValue(modelsAtom)
   const chat = useChat()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,7 +23,7 @@ export function ChatInput({ messages }: ChatInputProps) {
     setInput('')
 
     try {
-      await chat.mutateAsync({ messages: newMessages, model: selectedModel })
+      await chat.mutateAsync(newMessages)
     } finally {
       setIsTyping(false)
     }
@@ -33,21 +31,6 @@ export function ChatInput({ messages }: ChatInputProps) {
 
   return (
     <div className="border-t border-gray-200 bg-white px-4 py-3 shrink-0">
-      <div className="flex gap-2 items-center max-w-4xl mx-auto mb-2">
-        <label className="text-sm font-medium text-gray-700">Model:</label>
-        <select
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-          className="flex-1 border rounded px-2 py-1 text-sm"
-          disabled={chat.isPending}
-        >
-          {models.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.name} ({model.provider})
-            </option>
-          ))}
-        </select>
-      </div>
       <form onSubmit={handleSubmit} className="flex gap-2 items-center max-w-4xl mx-auto">
         <input
           type="text"
