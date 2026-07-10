@@ -7,7 +7,7 @@ from spark_jobs.spark_session import get_spark
 
 SYSTEM_PROMPT = """
 You are a retail analytics assistant. You have access to these Iceberg tables:
-- nessie.retail.fact_sales (order_id, order_date, product_id, store_id, customer_id, quantity, unit_price, total_amount, discount_pct)
+- nessie.retail.fact_sales (order_id, order_date, product_id, store_id, customer_id, quantity, unit_price, total_amount)
 - nessie.retail.dim_product (product_id, name, category, subcategory, brand, cost_price)
 - nessie.retail.dim_store (store_id, name, city, state, region, store_type)
 - nessie.retail.dim_customer (customer_id, segment, join_date, lifetime_value_bucket)
