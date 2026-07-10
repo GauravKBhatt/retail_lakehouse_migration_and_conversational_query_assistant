@@ -1,11 +1,12 @@
 from typing import Any, Dict, List
 
 from pyspark.errors.exceptions.captured import AnalysisException
+from pyspark.sql import SparkSession
 
 from api_backend.guard import is_safe_query  # stub for now, real guard in Phase 4
 from spark_jobs.spark_session import get_spark
 
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT = '''
 You are a retail analytics assistant. You have access to these Iceberg tables in the nessie.retail schema:
 - fact_sales (order_id, order_date, product_id, store_id, customer_id, quantity, unit_price, total_amount)
 - dim_product (product_id, name, category, subcategory, brand, cost_price)
@@ -13,13 +14,16 @@ You are a retail analytics assistant. You have access to these Iceberg tables in
 - dim_customer (customer_id, segment, join_date, lifetime_value_bucket)
 - dim_date (date_id, full_date, year, quarter, month, week, day_of_week)
 
-IMPORTANT: Always use the exact table names above. Do NOT use variations like sales_facts, product_dim, etc.
+IMPORTANT: Always use the exact table names above. Do NOT use variations.
 Always qualify table names with the schema: nessie.retail.table_name
 Examples: nessie.retail.fact_sales, nessie.retail.dim_product
 
+IMPORTANT: Do NOT query information_schema or any system tables.
+
 Always generate standard Spark SQL. Never use INSERT, UPDATE, DELETE, or DROP.
 Limit results to 100 rows unless the user asks for aggregates.
-"""
+'''
+
 
 # Gemini function-calling tool declaration (equivalent of Claude's tool schema).
 LAKEHOUSE_QUERY_TOOL = {
