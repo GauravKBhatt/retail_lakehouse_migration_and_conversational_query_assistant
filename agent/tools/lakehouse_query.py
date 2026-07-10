@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from pyspark.sql import SparkSession
+from pyspark.errors.exceptions.captured import AnalysisException
 
 from api_backend.guard import is_safe_query  # stub for now, real guard in Phase 4
 from spark_jobs.spark_session import get_spark
@@ -62,7 +62,12 @@ def execute_query(sql: str) -> Dict[str, Any]:
         return {"error": "Query rejected by safety guard"}
 
     spark = get_or_create_spark()
-    df = spark.sql(sql)
+    try:
+        df = spark.sql(sql)
+    except AnalysisException as e:
+        return {
+            "error": f"Query failed — table or view not found. Details: {e}"
+        }
     rows: List = df.limit(100).collect()
 
     return {
