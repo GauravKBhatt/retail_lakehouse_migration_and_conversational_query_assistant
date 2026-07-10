@@ -1,4 +1,5 @@
 import os
+import json
 from typing import List, Optional, Literal
 
 # importing all the model providers.
@@ -220,7 +221,7 @@ async def chat_groq(req: ChatRequest, model_name: str) -> dict[str, str]:
         
         # Execute tool calls
         tool_call = message.tool_calls[0]
-        result = run_tool(tool_call.function.name, tool_call.function.arguments)
+        result = run_tool(tool_call.function.name, json.loads(tool_call.function.arguments))
         
         # Add assistant message and tool response to history
         messages.append({"role": "assistant", "content": message.content or "", "tool_calls": [tool_call]})
