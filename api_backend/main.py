@@ -17,6 +17,7 @@ from agent.tools.lakehouse_query import (
 )
 from agent.tools.time_travel import TIME_TRAVEL_TOOL, execute_time_travel_query
 from agent.tools.explain_query import EXPLAIN_TOOL, explain_plan
+from api_backend.logger import log_event
 
 # Model configuration
 MODELS = {
@@ -147,20 +148,23 @@ def run_tool(name: str, args: dict) -> dict:
     Adding a new tool later just means adding another branch here plus
     including its declaration in the model's tools list above.
     """
-    if name == "run_lakehouse_query":
-        return execute_query(args["sql"])
+    log_event("tool_call", {"tool": name, "arguments": args})
 
-    if name == "run_time_travel_query":
-        return execute_time_travel_query(
+    if name == "run_lakehouse_query":
+        result = execute_query(args["sql"])
+    elif name == "run_time_travel_query":
+        result = execute_time_travel_query(
             sql=args["sql"],
             as_of_date=args.get("as_of_date"),
             snapshot_id=args.get("snapshot_id"),
         )
+    elif name == "explain_query_plan":
+        result = explain_plan(args["sql"])
+    else:
+        result = {"error": f"Unknown tool: {name}"}
 
-    if name == "explain_query_plan":
-        return explain_plan(args["sql"])
-
-    return {"error": f"Unknown tool: {name}"}
+    log_event("tool_result", {"tool": name, "result": result})
+    return result
 
 
 async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
@@ -239,6 +243,11 @@ async def chat_groq(req: ChatRequest, model_name: str) -> dict[str, str]:
 @app.post("/chat")
 async def chat(req: ChatRequest) -> dict[str, str]:
     """Route chat request to appropriate provider based on model selection."""
+    log_event("chat_request", {
+        "model": req.model,
+        "messages": [m.model_dump() for m in req.messages],
+    })
+    
     config = MODELS.get(req.model, MODELS["gemini-2.5-flash"])
     
     if config["provider"] == "gemini":
