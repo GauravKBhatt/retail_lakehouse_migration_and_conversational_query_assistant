@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 from pyspark.sql import SparkSession
 
 from api_backend.guard import is_safe_query
+from api_backend.logger import log_event 
 from spark_jobs.spark_session import get_spark
 
 # Gemini function-calling tool declaration for time travel queries.
@@ -81,6 +82,12 @@ def execute_time_travel_query(
     if snap_id is None:
         return {"error": "Could not resolve a snapshot for the given date/snapshot_id"}
 
+    log_event("time_travel_query", {
+        "snapshot_id": snap_id,
+        "as_of_date": as_of_date,
+        "snapshot_id": snapshot_id
+    })
+
     sql = sql.replace(
         "nessie.retail.fact_sales",
         f"nessie.retail.fact_sales VERSION AS OF {snap_id}",
@@ -90,8 +97,14 @@ def execute_time_travel_query(
     df = spark.sql(sql)
     rows = df.limit(100).collect()
 
-    return {
+    result = {
         "snapshot_id": snap_id,
         "columns": df.columns,
         "rows": [[str(value) for value in row] for row in rows],
     }
+
+    log_event("time_travel_query_result", {
+        "snapshot_id": snap_id,
+        "row_count": len(rows),
+    })
+    return result
