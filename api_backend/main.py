@@ -22,10 +22,10 @@ from agent.tools.explain_query import EXPLAIN_TOOL, explain_plan
 MODELS = {
     "gemini-2.5-flash": {"provider": "gemini", "name": "gemini-2.5-flash"},
     "gemini-1.5-pro": {"provider": "gemini", "name": "gemini-1.5-pro"},
-    "groq-llama3-70b": {"provider": "groq", "name": "llama3-70b-8192"},
-    "groq-llama3-8b": {"provider": "groq", "name": "llama3-8b-8192"},
-    "groq-mixtral": {"provider": "groq", "name": "mixtral-8x7b-32768"},
-    "groq-gemma": {"provider": "groq", "name": "gemma-7b-it"},
+    "meta-llama/llama-4-scout-17b-16e-instruct": {"provider": "groq", "name": "meta-llama/llama-4-scout-17b-16e-instruct"},
+    "qwen/qwen3-32b": {"provider": "groq", "name": "qwen/qwen3-32b"},
+    "openai/gpt-oss-20b": {"provider": "groq", "name": "openai/gpt-oss-20b"},
+    "qwen/qwen3.6-27b": {"provider": "groq", "name": "qwen/qwen3.6-27b"},
     "groq/gpt-oss-120b": {"provider": "groq", "name": "openai/gpt-oss-120b"}
 }
 
