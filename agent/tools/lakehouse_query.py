@@ -64,8 +64,9 @@ def execute_query(sql: str) -> Dict[str, Any]:
     capped at 100 rows and every value is stringified so the result is
     safe to serialize back to the model as a function response.
     """
-    if not is_safe_query(sql):
-        return {"error": "Query rejected by safety guard"}
+    safe, reason = is_safe_query(sql)
+    if not safe:
+        return {"error": reason}   
 
     log_event("sql_execution", {"sql": sql})
 
