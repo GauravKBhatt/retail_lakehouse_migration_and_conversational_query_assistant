@@ -22,7 +22,6 @@ Examples: nessie.retail.fact_sales, nessie.retail.dim_product
 IMPORTANT: Do NOT query information_schema or any system tables. They do not exist in this Spark environment.
 To list tables, use: SHOW TABLES IN nessie.retail
 
-Always generate standard Spark SQL. Never use INSERT, UPDATE, DELETE, or DROP.
 Limit results to 100 rows unless the user asks for aggregates.
 '''
 
