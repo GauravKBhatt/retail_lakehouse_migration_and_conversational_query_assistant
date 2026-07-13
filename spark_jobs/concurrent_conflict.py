@@ -1,5 +1,6 @@
 import threading
 import time
+from datetime import date 
 from pyspark.sql import Row
 from spark_jobs.spark_session import get_spark
 
@@ -24,7 +25,7 @@ def writer(job_id: int = 0, delay: float = 0.0) -> bool:
         rows = [
             Row(
                 order_id=9_000_000 + job_id,
-                order_date="2024-01-15",
+                order_date=date(2024,1,15),
                 product_id=1,
                 store_id=1,
                 customer_id=1,
