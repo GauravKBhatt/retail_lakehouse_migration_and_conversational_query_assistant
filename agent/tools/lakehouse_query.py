@@ -3,7 +3,8 @@ from typing import Any, Dict, List
 from pyspark.errors.exceptions.captured import AnalysisException
 from pyspark.sql import SparkSession
 
-from api_backend.guard import is_safe_query  # stub for now, real guard in Phase 4
+from api_backend.guard import is_safe_query  
+from governance.masking import get_masked_columns, rewrite_query_with_masks
 from spark_jobs.spark_session import get_spark
 from api_backend.logger import log_event
 
@@ -56,16 +57,26 @@ def get_or_create_spark() -> SparkSession:
     return SparkSession.getActiveSession() or get_spark()
 
 
-def execute_query(sql: str) -> Dict[str, Any]:
+def execute_query(sql: str, user_role: str = "analyst") -> Dict[str, Any]:
     """Run a SQL query against the lakehouse and return rows as plain data.
 
     Rejects the query up front if it fails the safety guard. Results are
     capped at 100 rows and every value is stringified so the result is
     safe to serialize back to the model as a function response.
+    Rejects the query up front if it fails the safety guard. Applies
+    column-level masking via OPA before execution. Results are capped at
+    100 rows and every value is stringified so the result is safe to
+    serialize back to the model as a function response.
     """
+
     safe, reason = is_safe_query(sql)
     if not safe:
         return {"error": reason}   
+
+    masked_cols = get_masked_columns(user_role)
+    if masked_cols:
+        sql = rewrite_query_with_masks(sql, masked_cols)
+        log_event("query_masking", {"role": user_role, "masked": masked_cols, "sql": sql})
 
     log_event("sql_execution", {"sql": sql})
 
