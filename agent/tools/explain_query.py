@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 from pyspark.sql import SparkSession
 
+from api_backend.guard import is_safe_query
 from spark_jobs.spark_session import get_spark
 from api_backend.logger import log_event
 
@@ -31,6 +32,20 @@ def get_or_create_spark() -> SparkSession:
 
 
 def explain_plan(sql: str) -> Dict[str, Any]:
+    """
+    Explain the execution plan for a given SQL query.
+    
+    Args:
+        sql: The SQL query to explain
+        
+    Returns:
+        Dict containing plan details and safety check results
+    """
+
+    safe, reason = is_safe_query(sql)
+    if not safe:
+        return {"error": reason}
+    
     log_event("explain_query",{"sql":sql})
 
     spark = get_or_create_spark()
