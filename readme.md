@@ -125,6 +125,16 @@ Old data files have no `discount_pct` column on disk at all — Iceberg resolves
 
 This confirms Iceberg's schema evolution model: old rows (`order_id=1`) and new rows (`order_id=9999999`) coexist under a single evolved schema, with no rewrite of historical data files required.
 
+## Concurrent Writer Conflict (Optimistic Concurrency Control)
+
+Iceberg uses optimistic concurrency: two writers appending to the same partition simultaneously will produce a `CommitFailedException` when the second writer tries to commit against a stale catalog state. On Linux, this is straightforward — two threads each hold their own Spark session and write concurrently. On Windows, PySpark is not thread-safe (threading crashes the Python worker) and multiprocessing hits the same issue because PySpark's JVM bridge doesn't survive process forking. Subprocess isolation via `subprocess.Popen` avoids the crash — each process gets its own JVM — but SQL INSERT is atomic and fast enough that both commits complete sequentially before either can conflict. The conflict simulation therefore requires either a Linux host (where threading works) or manual seeding of the `nessie.retail.commit_conflicts` metadata table. The `get_commit_conflicts` agent tool reads from this table regardless of how the records were produced.
+
+```bash
+.venv\Scripts\python -m spark_jobs.seed_conflicts
+```
+
+---
+
 ## Time Travel Proof
 
 Iceberg records every write as an immutable snapshot. The same query run against two different snapshots of `fact_sales` returns different results, proving real historical state is preserved — not just current-state metadata.
