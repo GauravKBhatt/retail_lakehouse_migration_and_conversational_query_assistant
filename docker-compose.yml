@@ -36,5 +36,11 @@ services:
       - "5000:5000"
       - "5001:5001"
 
+  opa:
+    image: openpolicyagent/opa:latest
+    command: run --server
+    ports:
+      - "8181:8181"
+
 volumes:
   postgres_data:
