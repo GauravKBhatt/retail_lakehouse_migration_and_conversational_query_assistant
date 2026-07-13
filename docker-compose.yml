@@ -38,9 +38,11 @@ services:
 
   opa:
     image: openpolicyagent/opa:0.68.0
-    command: run --server --addr 0.0.0.0:8181
+    command: run --server --addr 0.0.0.0:8181 /policies/policy.rego
     ports:
       - "8181:8181"
+    volumes:
+      - ./governance:/policies
 
 volumes:
   postgres_data:
