@@ -206,7 +206,7 @@ async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
 
 async def chat_groq(req: ChatRequest, model_name: str) -> dict[str, str]:
     """Handle chat using Groq."""
-    messages = to_groq_history(req.messages)
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + to_groq_history(req.messages)
     
     response = groq_client.chat.completions.create(
         model=model_name,
