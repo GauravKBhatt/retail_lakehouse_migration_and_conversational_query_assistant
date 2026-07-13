@@ -37,8 +37,8 @@ services:
       - "5001:5001"
 
   opa:
-    image: openpolicyagent/opa:latest
-    command: run --server
+    image: openpolicyagent/opa:0.68.0
+    command: run --server --addr 0.0.0.0:8181
     ports:
       - "8181:8181"
 
