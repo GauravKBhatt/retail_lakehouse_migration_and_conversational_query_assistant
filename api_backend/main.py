@@ -117,6 +117,7 @@ class ChatRequest(BaseModel):
 
     messages: List[Message]
     as_of_date: Optional[str] = None  # optional time-travel pin
+    user_role: str = "analyst"  # for column-level masking via OPA
     model: str = "gemini-2.5-flash"  # default model
 
 def get_gemini_model(model_name: str):
@@ -155,7 +156,7 @@ def to_groq_history(messages: List[Message]) -> List[dict]:
     ]
 
 
-def run_tool(name: str, args: dict) -> dict:
+def run_tool(name: str, args: dict, user_role: str = "analyst") -> dict:
     """Dispatch a Gemini function call to the matching tool executor.
 
     Adding a new tool later just means adding another branch here plus
@@ -164,7 +165,7 @@ def run_tool(name: str, args: dict) -> dict:
     log_event("tool_call", {"tool": name, "arguments": args})
 
     if name == "run_lakehouse_query":
-        result = execute_query(args["sql"])
+        result = execute_query(args["sql"], user_role=user_role)
     elif name == "run_time_travel_query":
         result = execute_time_travel_query(
             sql=args["sql"],
@@ -202,7 +203,7 @@ async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
         if function_call is None:
             break
 
-        result = run_tool(function_call.name, dict(function_call.args))
+        result = run_tool(function_call.name, dict(function_call.args), user_role=req.user_role)
 
         response = chat_session.send_message(
             genai.protos.Content(
@@ -241,7 +242,7 @@ async def chat_groq(req: ChatRequest, model_name: str) -> dict[str, str]:
         
         # Execute tool calls
         tool_call = message.tool_calls[0]
-        result = run_tool(tool_call.function.name, json.loads(tool_call.function.arguments))
+        result = run_tool(tool_call.function.name, json.loads(tool_call.function.arguments), user_role=req.user_role)
         
         # Add assistant message and tool response to history
         messages.append({"role": "assistant", "content": message.content or "", "tool_calls": [tool_call]})
