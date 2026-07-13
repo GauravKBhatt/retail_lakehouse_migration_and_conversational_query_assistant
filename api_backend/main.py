@@ -17,6 +17,7 @@ from agent.tools.lakehouse_query import (
 )
 from agent.tools.time_travel import TIME_TRAVEL_TOOL, execute_time_travel_query
 from agent.tools.explain_query import EXPLAIN_TOOL, explain_plan
+from agent.tools.commit_conflict import CONFLICT_TOOL, get_conflicts
 from api_backend.logger import log_event
 
 # Model configuration
@@ -75,6 +76,18 @@ GROQ_TOOLS = [
                 "required": ["sql"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_commit_conflicts",
+            "description": "Retrieve recent Iceberg commit conflicts. Use this when the user asks why a write job failed or mentions commit errors.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
 
@@ -111,7 +124,7 @@ def get_gemini_model(model_name: str):
     return genai.GenerativeModel(
         model_name=model_name,
         system_instruction=SYSTEM_PROMPT,
-        tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL, EXPLAIN_TOOL],
+        tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL, EXPLAIN_TOOL,CONFLICT_TOOL],
     )
 
 
@@ -160,6 +173,9 @@ def run_tool(name: str, args: dict) -> dict:
         )
     elif name == "explain_query_plan":
         result = explain_plan(args["sql"])
+    
+    elif name == "get_commit_conflicts":
+        result = get_conflicts()
     else:
         result = {"error": f"Unknown tool: {name}"}
 
