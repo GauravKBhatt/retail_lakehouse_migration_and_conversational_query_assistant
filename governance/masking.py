@@ -11,7 +11,7 @@ from typing import Optional
 import requests
 import sqlglot
 from sqlglot import exp
-from sqlglot.expressions import Column, Func, Alias
+from sqlglot.expressions import Column, Alias
 
 OPA_URL = "http://localhost:8181/v1/data/lakehouse/masking/masked_columns"
 
@@ -31,6 +31,21 @@ def get_masked_columns(user_role: str, *, opa_url: str = OPA_URL) -> list[str]:
 def _col_unqualified_name(col: Column) -> str:
     """Return the bare column name without table qualifier."""
     return col.name
+
+
+def _in_select_clause(node: Column) -> bool:
+    """Return True if *node* is inside a SELECT expression list."""
+    child = node
+    parent = child.parent
+    while parent is not None:
+        if isinstance(parent, exp.Select):
+            return True
+        if isinstance(parent, (exp.Join, exp.Where, exp.Group, exp.Order, exp.Having,
+                               exp.Window, exp.Subquery, exp.Union)):
+            return False
+        child = parent
+        parent = parent.parent
+    return False
 
 
 def rewrite_query_with_masks(sql: str, masked_cols: list[str]) -> str:
@@ -53,18 +68,21 @@ def rewrite_query_with_masks(sql: str, masked_cols: list[str]) -> str:
     tree = sqlglot.parse_one(sql, dialect="spark")
 
     def _rewrite(node):
-        # Only transform bare Column references, not columns already inside
-        # an Alias or a function that we produced.
-        if isinstance(node, Column) and not isinstance(node.parent, (Alias, Func)):
+        if isinstance(node, Column) and not isinstance(node.parent, exp.Func):
             bare_name = _col_unqualified_name(node)
             if bare_name in masked_set:
-                return Alias(
-                    this=Func(
-                        this="SHA2",
-                        expressions=[Column(this=bare_name), exp.Literal.number(256)],
-                    ),
-                    alias=bare_name,
+                hashed = exp.Anonymous(
+                    this="SHA2",
+                    expressions=[
+                        exp.Cast(this=node.copy(), to=exp.DataType(this=exp.DataType.Type.TEXT)),
+                        exp.Literal.number(256),
+                    ],
                 )
+                if isinstance(node.parent, Alias):
+                    return hashed
+                if _in_select_clause(node):
+                    return Alias(this=hashed, alias=bare_name)
+                return hashed
         return node
 
     rewritten = tree.transform(_rewrite)
