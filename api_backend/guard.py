@@ -3,7 +3,7 @@ from sqlglot import parse_one
 from sqlglot.expressions import Insert, Update, Delete, Drop, Create, Alter, Merge
 
 
-DANGEROUS_NODES = (Insert, Update, Delete, Drop, Create, Alter)
+DANGEROUS_NODES = (Insert, Update, Delete, Drop, Create, Alter, Merge)
 
 def is_safe_query(sql: str) -> tuple[bool, str]:
     """
@@ -22,8 +22,4 @@ def is_safe_query(sql: str) -> tuple[bool, str]:
     for node in tree.walk():
         if isinstance(node, DANGEROUS_NODES):
             return False, f'Rejected: {type(node).__name__} statements are not allowed'
-    # Also block subquery writes
-    if any(kw in sql.upper() for kw in ['INTO', 'CREATE TABLE', 'DROP TABLE',
-    'TRUNCATE']):
-        return False, 'Rejected: write keywords detected'
     return True, 'ok'
