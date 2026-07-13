@@ -74,8 +74,9 @@ def execute_time_travel_query(
     resolved snapshot, so the same query the model would normally run
     reads historical state instead of the current one.
     """
-    if not is_safe_query(sql):
-        return {"error": "Query rejected by safety guard"}
+    safe, reason = is_safe_query(sql)
+    if not safe:
+        return {"error": reason}
 
     snap_id = resolve_snapshot(as_of_date, snapshot_id)
 
