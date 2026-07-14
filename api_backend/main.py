@@ -167,23 +167,25 @@ def get_logs(lines: int = 500) -> PlainTextResponse:
     return PlainTextResponse("".join(tail))
 
 
-def to_gemini_history(messages: List[Message]) -> List[dict]:
-    """Convert our Message list into Gemini's chat history format.
+def _role(m) -> str:
+    return m.role if isinstance(m, Message) else m["role"]
 
-    Gemini uses 'model' instead of 'assistant' for the AI role, and wraps
-    text in a parts list rather than a plain string.
-    """
+def _content(m) -> str:
+    return m.content if isinstance(m, Message) else m["content"]
+
+def to_gemini_history(messages) -> list[dict]:
+    """Convert Message list or dicts into Gemini's chat history format."""
     role_map = {"user": "user", "assistant": "model"}
     return [
-        {"role": role_map.get(m.role, "user"), "parts": [m.content]}
+        {"role": role_map.get(_role(m), "user"), "parts": [_content(m)]}
         for m in messages
     ]
 
 
-def to_groq_history(messages: List[Message]) -> List[dict]:
-    """Convert our Message list into Groq/OpenAI chat history format."""
+def to_groq_history(messages) -> list[dict]:
+    """Convert Message list or dicts into Groq/OpenAI chat history format."""
     return [
-        {"role": m.role, "content": m.content}
+        {"role": _role(m), "content": _content(m)}
         for m in messages
     ]
 
