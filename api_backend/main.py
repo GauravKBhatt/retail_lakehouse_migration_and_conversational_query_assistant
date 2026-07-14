@@ -18,6 +18,7 @@ from agent.tools.lakehouse_query import (
 from agent.tools.time_travel import TIME_TRAVEL_TOOL, execute_time_travel_query
 from agent.tools.explain_query import EXPLAIN_TOOL, explain_plan
 from agent.tools.commit_conflict import CONFLICT_TOOL, get_conflicts
+from agent.audit_query import AUDIT_TOOL, execute_audit_query
 from api_backend.logger import log_event
 
 # Model configuration
@@ -88,6 +89,20 @@ GROQ_TOOLS = [
                 "required": []
             }
         }
+    },
+    {
+    "type": "function",
+    "function": {
+        "name": "run_audit_query",
+        "description": "Query the audit_log table to see past user interactions, questions asked, SQL generated, and answers given.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "sql": {"type": "string", "description": "SQL query against nessie.retail.audit_log"}
+            },
+            "required": ["sql"]
+        }
+    }
     }
 ]
 
@@ -174,6 +189,9 @@ def run_tool(name: str, args: dict, user_role: str = "analyst") -> dict:
         )
     elif name == "explain_query_plan":
         result = explain_plan(args["sql"])
+
+    elif name == "run_audit_query":
+        result = execute_audit_query(args["sql"])
     
     elif name == "get_commit_conflicts":
         result = get_conflicts()
