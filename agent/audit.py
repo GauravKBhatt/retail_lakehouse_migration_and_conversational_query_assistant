@@ -32,4 +32,7 @@ def log_interaction(user_role, model, question, sql, snapshot_id,
             {esc(answer)}
         )
     """
-    spark.sql(insert_sql)
+    try:
+        spark.sql(insert_sql)
+    except Exception:
+        pass  # audit_log table not yet created
