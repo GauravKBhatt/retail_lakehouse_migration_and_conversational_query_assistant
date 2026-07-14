@@ -1,0 +1,10 @@
+fastapi==0.138.1
+uvicorn==0.49.0
+groq==1.5.0
+google-generativeai==0.8.6
+redis==8.0.1
+pyspark==3.5.1
+pyiceberg==0.11.1
+sqlglot==30.12.0
+requests==2.34.2
+python-dotenv==1.0.1

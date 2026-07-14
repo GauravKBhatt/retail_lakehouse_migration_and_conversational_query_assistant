@@ -1,0 +1,15 @@
+.git
+.venv
+.env
+__pycache__
+*.pyc
+node_modules
+dist
+logs
+iceberg_warehouse
+image_proofs
+docs
+helper_docs
+data
+eval
+*.csv
