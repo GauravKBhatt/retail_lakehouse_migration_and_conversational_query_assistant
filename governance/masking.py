@@ -13,7 +13,7 @@ import sqlglot
 from sqlglot import exp
 from sqlglot.expressions import Column, Alias
 
-OPA_URL = "http://localhost:8181/v1/data/lakehouse/masking/masked_columns"
+OPA_URL = "http://opa:8181/v1/data/lakehouse/masking/masked_columns"
 
 
 def get_masked_columns(user_role: str, *, opa_url: str = OPA_URL) -> list[str]:
@@ -22,9 +22,11 @@ def get_masked_columns(user_role: str, *, opa_url: str = OPA_URL) -> list[str]:
         resp = requests.post(opa_url, json={"input": {"role": user_role}}, timeout=2)
         resp.raise_for_status()
         result = resp.json().get("result", [])
+        print(f"OPA response for role {user_role}: {result}")
         return result if isinstance(result, list) else []
-    except requests.RequestException:
+    except requests.RequestException as e:
         # OPA unreachable — fail open (no masking) so the app stays usable
+        print(f"OPA connection failed: {e}")
         return []
 
 
