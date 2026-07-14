@@ -14,9 +14,53 @@ export function ChatWindow({ messages }: ChatWindowProps) {
     const parts = content.split(sqlRegex)
     const matches = content.match(sqlRegex) || []
     
+    const renderTable = (text: string) => {
+      const lines = text.trim().split('\n').filter(line => line.trim())
+      if (lines.length < 2) return <p className="whitespace-pre-wrap">{text}</p>
+      
+      // Check if it looks like a table (has pipe separators)
+      const hasPipes = lines.some(line => line.includes('|'))
+      if (!hasPipes) return <p className="whitespace-pre-wrap">{text}</p>
+      
+      const rows = lines.map(line => 
+        line.split('|').map(cell => cell.trim()).filter(cell => cell)
+      )
+      
+      if (rows.length < 2 || rows.some(row => row.length === 0)) {
+        return <p className="whitespace-pre-wrap">{text}</p>
+      }
+      
+      return (
+        <div className="overflow-x-auto mt-3 mb-3">
+          <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+            <thead className="bg-gray-50">
+              <tr>
+                {rows[0].map((cell, i) => (
+                  <th key={i} className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">
+                    {cell}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {rows.slice(1).map((row, rowIndex) => (
+                <tr key={rowIndex} className="hover:bg-gray-50">
+                  {row.map((cell, cellIndex) => (
+                    <td key={cellIndex} className="px-4 py-2 text-sm text-gray-900 whitespace-nowrap">
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+    
     return parts.map((part, i) => (
       <span key={i}>
-        {part}
+        {renderTable(part)}
         {matches[i] && (
           <pre className="bg-gray-900 text-[#FFA62B] p-3 rounded-lg mt-2 mb-2 overflow-x-auto text-sm leading-relaxed">
             <code>{matches[i]}</code>

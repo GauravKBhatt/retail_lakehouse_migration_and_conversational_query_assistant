@@ -11,7 +11,7 @@ export function LogsPanel({ open, onClose }: LogsPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
-  const { data: logs, refetch, isFetching } = useQuery({
+  const { data: logs, isFetching } = useQuery({
     queryKey: ['logs'],
     queryFn: () => axios.get('http://localhost:8000/logs?lines=300').then(r => r.data),
     refetchInterval: 3000,
