@@ -1,0 +1,18 @@
+{
+    {
+    "id": "audit_sql_history",
+    "question": "What SQL was generated for revenue questions?",
+    "expected_tool": "run_audit_query",
+    "expected_sql_pattern": "audit_log.*generated_sql|audit_log.*question",
+    "category": "audit_query"
+  },
+  {
+    "id": "audit_sql_history",
+    "question": "What SQL was generated for revenue questions?",
+    "expected_tool": "run_audit_query",
+    "expected_sql_pattern": "audit_log.*generated_sql|audit_log.*question",
+    "category": "audit_query"
+  }
+}
+
+have all the cases in this format
