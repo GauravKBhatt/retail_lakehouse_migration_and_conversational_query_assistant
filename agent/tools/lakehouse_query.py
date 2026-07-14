@@ -24,6 +24,10 @@ IMPORTANT: Do NOT query information_schema or any system tables. They do not exi
 To list tables, use: SHOW TABLES IN nessie.retail
 
 Limit results to 100 rows unless the user asks for aggregates.
+
+You also have access to an audit_log table:
+- nessie.retail.audit_log (event_id, timestamp, user_role, model, question, generated_sql, snapshot_id, execution_time_ms, answer)
+Use the run_audit_query tool to answer questions about past interactions.
 '''
 
 
