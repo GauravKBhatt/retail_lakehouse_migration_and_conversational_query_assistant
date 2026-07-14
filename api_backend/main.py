@@ -1,6 +1,7 @@
 import os
 import json
 import time
+from pathlib import Path
 from typing import List, Optional, Literal
 
 import google.generativeai as genai
@@ -8,6 +9,7 @@ from groq import Groq
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from agent.tools.lakehouse_query import (
@@ -151,6 +153,18 @@ def get_gemini_model(model_name: str):
 def health() -> dict[str, str]:
     """Basic liveness check for the backend."""
     return {"status": "ok"}
+
+
+@app.get("/logs")
+def get_logs(lines: int = 500) -> PlainTextResponse:
+    """Return the last N lines of server.log."""
+    log_path = Path(__file__).resolve().parent.parent / "logs" / "server.log"
+    if not log_path.exists():
+        return PlainTextResponse("No log file found.", status_code=404)
+    with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+        all_lines = f.readlines()
+    tail = all_lines[-lines:]
+    return PlainTextResponse("".join(tail))
 
 
 def to_gemini_history(messages: List[Message]) -> List[dict]:
