@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ChatWindow } from './components/chatWindow'
-import { ChatInput } from './components/chatInput'
+import { ChatWindow } from './components/ChatWindow'
+import { ChatInput } from './components/ChatInput'
 import { LogsPanel } from './components/LogsPanel'
 
 export default function App() {
