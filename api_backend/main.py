@@ -3,7 +3,6 @@ import json
 import time
 from typing import List, Optional, Literal
 
-# importing all the model providers.
 import google.generativeai as genai
 from groq import Groq
 
@@ -21,6 +20,7 @@ from agent.tools.explain_query import EXPLAIN_TOOL, explain_plan
 from agent.tools.commit_conflict import CONFLICT_TOOL, get_conflicts
 from agent.tools.audit_query import AUDIT_TOOL, execute_audit_query
 from agent.audit import log_interaction
+from agent.memory import get_history, save_history
 from api_backend.logger import log_event
 
 # Model configuration
@@ -133,6 +133,7 @@ class ChatRequest(BaseModel):
     """Payload sent by the frontend when the user submits a chat message."""
 
     messages: List[Message]
+    session_id: str = "default"
     as_of_date: Optional[str] = None  # optional time-travel pin
     user_role: str = "analyst"  # for column-level masking via OPA
     model: str = "gemini-2.5-flash"  # default model
@@ -207,10 +208,16 @@ def run_tool(name: str, args: dict, user_role: str = "analyst") -> dict:
 async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
     """Handle chat using Gemini."""
     model = get_gemini_model(model_name)
-    history = to_gemini_history(req.messages[:-1])
+
+    # Merge stored history with incoming messages
+    stored = get_history(req.session_id)
+    incoming = [{"role": m.role, "content": m.content} for m in req.messages]
+    full_messages = stored + incoming
+
+    history = to_gemini_history(full_messages[:-1])
     chat_session = model.start_chat(history=history)
 
-    latest_message = req.messages[-1].content
+    latest_message = full_messages[-1]["content"]
     response = chat_session.send_message(latest_message)
 
     last_sql = None
@@ -248,6 +255,8 @@ async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
             )
         )
 
+    save_history(req.session_id, full_messages + [{"role": "assistant", "content": response.text}])
+
     log_interaction(
         user_role=req.user_role,
         model=req.model,
@@ -262,7 +271,14 @@ async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
 
 async def chat_groq(req: ChatRequest, model_name: str) -> dict[str, str]:
     """Handle chat using Groq."""
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + to_groq_history(req.messages)
+    # Merge stored history with incoming messages
+    stored = get_history(req.session_id)
+    incoming = [{"role": m.role, "content": m.content} for m in req.messages]
+    full_messages = stored + incoming
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + [
+        {"role": m["role"], "content": m["content"]} for m in full_messages
+    ]
     
     response = groq_client.chat.completions.create(
         model=model_name,
@@ -280,6 +296,7 @@ async def chat_groq(req: ChatRequest, model_name: str) -> dict[str, str]:
         
         # If no tool call, return the response
         if not message.tool_calls:
+            save_history(req.session_id, full_messages + [{"role": "assistant", "content": message.content or ""}])
             log_interaction(
                 user_role=req.user_role,
                 model=req.model,
