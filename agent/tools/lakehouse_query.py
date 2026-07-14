@@ -20,6 +20,11 @@ IMPORTANT: Always use the exact table names above. Do NOT use variations.
 Always qualify table names with the schema: nessie.retail.table_name
 Examples: nessie.retail.fact_sales, nessie.retail.dim_product
 
+Column type hints:
+- dim_date.month is an INTEGER (1-12), NOT a string. Use month = 2 for February, month = 12 for December.
+- dim_date.year is an INTEGER (e.g., 2023, 2024).
+- fact_sales.order_date is a STRING in 'yyyy-MM-dd' format. To filter by month, JOIN with dim_date on full_date = order_date.
+
 IMPORTANT: Do NOT query information_schema or any system tables. They do not exist in this Spark environment.
 To list tables, use: SHOW TABLES IN nessie.retail
 
