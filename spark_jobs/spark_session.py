@@ -8,19 +8,13 @@ os.environ["PYSPARK_SUBMIT_ARGS"] = "--driver-memory 4g --executor-memory 4g pys
 
 from pyspark.sql import SparkSession
 
-# this is for not lettings the spark download jars again and again. it can be skipped but spark will re-download jars everytime
-JAR_DIR = os.environ.get(
-    "SPARK_JAR_DIR",
-    os.path.expanduser(os.environ["JAR_DIR"]),
-)
+JAR_DIR = os.environ.get("SPARK_JAR_DIR", os.environ.get("JAR_DIR", os.path.expanduser("~/.ivy2/jars")))
+NESSIE_URL = os.environ.get("NESSIE_URL", "http://localhost:19120/api/v1")
+WAREHOUSE_DIR = os.environ.get("WAREHOUSE_DIR", "file:///D:/retail_lakehouse_migration_and_conversational_query_assistant/iceberg_warehouse")
 
 
 def _resolve_jars(jar_dir: str = JAR_DIR) -> str:
-    """Return a comma-separated list of all jar files found under jar_dir.
-
-    Used to point spark.jars at locally cached jars instead of letting
-    Spark re-resolve spark.jars.packages from Maven on every run.
-    """
+    """Return a comma-separated list of all jar files found under jar_dir."""
     jars = glob.glob(os.path.join(jar_dir, "**", "*.jar"), recursive=True)
     if not jars:
         raise FileNotFoundError(
@@ -32,12 +26,7 @@ def _resolve_jars(jar_dir: str = JAR_DIR) -> str:
 
 
 def get_spark(app_name: str = "RetailLakehouse") -> SparkSession:
-    """Build (or fetch) a SparkSession wired up with Iceberg and Nessie.
-
-    Loads jars from local disk instead of Maven, and points the nessie
-    catalog at the local Nessie server and a durable Iceberg warehouse
-    directory.
-    """
+    """Build (or fetch) a SparkSession wired up with Iceberg and Nessie."""
     return (
         SparkSession.builder
         .appName(app_name)
@@ -61,7 +50,7 @@ def get_spark(app_name: str = "RetailLakehouse") -> SparkSession:
         )
         .config(
             "spark.sql.catalog.nessie.uri",
-            "http://localhost:19120/api/v1"
+            NESSIE_URL
         )
         .config(
             "spark.sql.catalog.nessie.ref",
@@ -69,7 +58,7 @@ def get_spark(app_name: str = "RetailLakehouse") -> SparkSession:
         )
         .config(
             "spark.sql.catalog.nessie.warehouse",
-            "file:///D:/retail_lakehouse_migration_and_conversational_query_assistant/iceberg_warehouse"
+            WAREHOUSE_DIR
         )
         .getOrCreate()
     )
