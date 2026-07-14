@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from typing import List, Optional, Literal
 
 # importing all the model providers.
@@ -18,7 +19,8 @@ from agent.tools.lakehouse_query import (
 from agent.tools.time_travel import TIME_TRAVEL_TOOL, execute_time_travel_query
 from agent.tools.explain_query import EXPLAIN_TOOL, explain_plan
 from agent.tools.commit_conflict import CONFLICT_TOOL, get_conflicts
-from agent.audit_query import AUDIT_TOOL, execute_audit_query
+from agent.tools.audit_query import AUDIT_TOOL, execute_audit_query
+from agent.audit import log_interaction
 from api_backend.logger import log_event
 
 # Model configuration
@@ -140,7 +142,7 @@ def get_gemini_model(model_name: str):
     return genai.GenerativeModel(
         model_name=model_name,
         system_instruction=SYSTEM_PROMPT,
-        tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL, EXPLAIN_TOOL,CONFLICT_TOOL],
+        tools=[LAKEHOUSE_QUERY_TOOL, TIME_TRAVEL_TOOL, EXPLAIN_TOOL, CONFLICT_TOOL, AUDIT_TOOL],
     )
 
 
@@ -211,6 +213,9 @@ async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
     latest_message = req.messages[-1].content
     response = chat_session.send_message(latest_message)
 
+    last_sql = None
+    last_snapshot_id = None
+
     while True:
         function_call = None
         for part in response.candidates[0].content.parts:
@@ -221,7 +226,14 @@ async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
         if function_call is None:
             break
 
-        result = run_tool(function_call.name, dict(function_call.args), user_role=req.user_role)
+        args = dict(function_call.args)
+        result = run_tool(function_call.name, args, user_role=req.user_role)
+
+        if function_call.name == "run_lakehouse_query":
+            last_sql = args.get("sql")
+        elif function_call.name == "run_time_travel_query":
+            last_sql = args.get("sql")
+            last_snapshot_id = args.get("snapshot_id")
 
         response = chat_session.send_message(
             genai.protos.Content(
@@ -236,6 +248,15 @@ async def chat_gemini(req: ChatRequest, model_name: str) -> dict[str, str]:
             )
         )
 
+    log_interaction(
+        user_role=req.user_role,
+        model=req.model,
+        question=req.messages[-1].content,
+        sql=last_sql,
+        snapshot_id=last_snapshot_id,
+        execution_time_ms=None,
+        answer=response.text,
+    )
     return {"role": "assistant", "content": response.text}
 
 
@@ -250,17 +271,36 @@ async def chat_groq(req: ChatRequest, model_name: str) -> dict[str, str]:
         temperature=0.7,
     )
 
+    last_sql = None
+    last_snapshot_id = None
+
     # Handle function calling loop
     while True:
         message = response.choices[0].message
         
         # If no tool call, return the response
         if not message.tool_calls:
+            log_interaction(
+                user_role=req.user_role,
+                model=req.model,
+                question=req.messages[-1].content,
+                sql=last_sql,
+                snapshot_id=last_snapshot_id,
+                execution_time_ms=None,
+                answer=message.content or "",
+            )
             return {"role": "assistant", "content": message.content or ""}
         
         # Execute tool calls
         tool_call = message.tool_calls[0]
-        result = run_tool(tool_call.function.name, json.loads(tool_call.function.arguments), user_role=req.user_role)
+        args = json.loads(tool_call.function.arguments)
+        result = run_tool(tool_call.function.name, args, user_role=req.user_role)
+
+        if tool_call.function.name == "run_lakehouse_query":
+            last_sql = args.get("sql")
+        elif tool_call.function.name == "run_time_travel_query":
+            last_sql = args.get("sql")
+            last_snapshot_id = args.get("snapshot_id")
         
         # Add assistant message and tool response to history
         messages.append({"role": "assistant", "content": message.content or "", "tool_calls": [tool_call]})
