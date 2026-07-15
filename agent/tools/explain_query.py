@@ -4,7 +4,7 @@ from typing import Any, Dict
 from pyspark.sql import SparkSession
 
 from api_backend.guard import is_safe_query
-from spark_jobs.spark_session import get_spark
+from spark_jobs.spark_session import get_spark, _spark_lock
 from api_backend.logger import log_event
 
 EXPLAIN_TOOL = {
@@ -49,7 +49,8 @@ def explain_plan(sql: str) -> Dict[str, Any]:
     log_event("explain_query",{"sql":sql})
 
     spark = get_or_create_spark()
-    plan = spark.sql(f"EXPLAIN EXTENDED {sql}").collect()[0][0]
+    with _spark_lock:
+        plan = spark.sql(f"EXPLAIN EXTENDED {sql}").collect()[0][0]
 
     selected = re.search(r"SelectedPartitions\s*:\s*(\d+)", plan)
     total = re.search(r"TotalPartitions\s*:\s*(\d+)", plan)

@@ -4,7 +4,7 @@ from pyspark.sql import SparkSession
 
 from api_backend.guard import is_safe_query
 from api_backend.logger import log_event 
-from spark_jobs.spark_session import get_spark
+from spark_jobs.spark_session import get_spark, _spark_lock
 
 # Gemini function-calling tool declaration for time travel queries.
 TIME_TRAVEL_TOOL = {
@@ -53,11 +53,12 @@ def resolve_snapshot(as_of_date: Optional[str], snapshot_id: Optional[int]) -> O
 
     if as_of_date:
         spark = get_or_create_spark()
-        row = spark.sql(f"""
-            SELECT snapshot_id FROM nessie.retail.fact_sales.snapshots
-            WHERE committed_at <= TIMESTAMP '{as_of_date} 23:59:59'
-            ORDER BY committed_at DESC LIMIT 1
-        """).collect()
+        with _spark_lock:
+            row = spark.sql(f"""
+                SELECT snapshot_id FROM nessie.retail.fact_sales.snapshots
+                WHERE committed_at <= TIMESTAMP '{as_of_date} 23:59:59'
+                ORDER BY committed_at DESC LIMIT 1
+            """).collect()
         return row[0][0] if row else None
 
     return None
@@ -95,12 +96,14 @@ def execute_time_travel_query(
     )
 
     spark = get_or_create_spark()
-    df = spark.sql(sql)
-    rows = df.limit(100).collect()
+    with _spark_lock:
+        df = spark.sql(sql)
+        rows = df.limit(100).collect()
+        columns = df.columns
 
     result = {
         "snapshot_id": snap_id,
-        "columns": df.columns,
+        "columns": columns,
         "rows": [[str(value) for value in row] for row in rows],
     }
 

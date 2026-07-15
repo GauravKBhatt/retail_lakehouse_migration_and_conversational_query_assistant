@@ -5,7 +5,7 @@ from pyspark.sql import SparkSession
 
 from api_backend.guard import is_safe_query  
 from governance.masking import get_masked_columns, rewrite_query_with_masks
-from spark_jobs.spark_session import get_spark
+from spark_jobs.spark_session import get_spark, _spark_lock
 from api_backend.logger import log_event
 
 SYSTEM_PROMPT = '''
@@ -90,16 +90,18 @@ def execute_query(sql: str, user_role: str = "analyst") -> Dict[str, Any]:
     log_event("sql_execution", {"sql": sql})
 
     spark = get_or_create_spark()
-    try:
-        df = spark.sql(sql)
-    except AnalysisException as e:
-        return {
-            "error": f"Query failed — table or view not found. Details: {e}"
-        }
-    rows: List = df.limit(100).collect()
+    with _spark_lock:
+        try:
+            df = spark.sql(sql)
+        except AnalysisException as e:
+            return {
+                "error": f"Query failed — table or view not found. Details: {e}"
+            }
+        rows: List = df.limit(100).collect()
+        columns = df.columns
 
     result = {
-        "columns": df.columns,
+        "columns": columns,
         "rows": [[str(value) for value in row] for row in rows],
         "row_count": len(rows),
     }
@@ -107,6 +109,6 @@ def execute_query(sql: str, user_role: str = "analyst") -> Dict[str, Any]:
     log_event("sql_result", {
         "sql": sql,
         "row_count": len(rows),
-        "columns": df.columns,
+        "columns": columns,
     })
     return result

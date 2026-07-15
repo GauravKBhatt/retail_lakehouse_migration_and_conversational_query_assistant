@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 from pyspark.sql import SparkSession
-from spark_jobs.spark_session import get_spark
+from spark_jobs.spark_session import get_spark, _spark_lock
 from api_backend.logger import log_event
 
 CONFLICT_TOOL = {
@@ -28,13 +28,14 @@ def get_conflicts() -> List[Dict[str, Any]]:
     """Get recent commit conflicts."""
     log_event("get_commit_conflicts", {})
     spark = get_or_create_spark()
-    try:
-        rows = spark.sql(
-            'SELECT * FROM nessie.retail.commit_conflicts ORDER BY job_id DESC LIMIT 10'
-        ).collect()
-        conflicts = [{'job_id': r['job_id'], 'error': r['error']} for r in rows]
-        log_event("get_commit_conflicts_result", {"count": len(conflicts)})
-        return conflicts
-    except Exception as e:
-        log_event("get_commit_conflicts_error", {"error": str(e)})
-        return []
+    with _spark_lock:
+        try:
+            rows = spark.sql(
+                'SELECT * FROM nessie.retail.commit_conflicts ORDER BY job_id DESC LIMIT 10'
+            ).collect()
+        except Exception as e:
+            log_event("get_commit_conflicts_error", {"error": str(e)})
+            return []
+    conflicts = [{'job_id': r['job_id'], 'error': r['error']} for r in rows]
+    log_event("get_commit_conflicts_result", {"count": len(conflicts)})
+    return conflicts
