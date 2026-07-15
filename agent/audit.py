@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from spark_jobs.spark_session import get_spark
+from spark_jobs.spark_session import get_spark, _spark_lock
 
 
 def log_interaction(user_role, model, question, sql, snapshot_id,
@@ -33,6 +33,7 @@ def log_interaction(user_role, model, question, sql, snapshot_id,
         )
     """
     try:
-        spark.sql(insert_sql)
+        with _spark_lock:
+            spark.sql(insert_sql)
     except Exception:
         pass  # audit_log table not yet created
