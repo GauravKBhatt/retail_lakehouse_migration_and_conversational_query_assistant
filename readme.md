@@ -1,3 +1,156 @@
+Acceptance Criteria 
+1) Time Travel Proof 
+((.venv) ) 
+gaurav.bhatt@YTK-LAP-112 MINGW64 /d/retail_lakehouse_migration_and_conversational_query_assistant (main)
+$ docker compose exec backend python -m spark_jobs.time_travel
+time="2026-07-17T07:57:38+05:45" level=warning msg="D:\\retail_lakehouse_migration_and_conversational_query_assistant\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+/usr/local/lib/python3.12/site-packages/pyspark/bin/load-spark-env.sh: line 68: ps: command not found
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC
+26/07/17 02:12:40 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+=== SNAPSHOT HISTORY BEFORE CHANGE ===
++-------------------+-----------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|snapshot_id        |committed_at           |summary                                                                                                                                              
+                                                                                                                                                                     |
++-------------------+-----------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|3873399174301443112|2026-07-15 09:17:20.833|{spark.app.id -> local-1784106997819, added-data-files -> 730, added-records -> 1200000, added-files-size -> 19610353, changed-partition-count -> 730, total-records -> 1200000, total-files-size -> 19610353, total-data-files -> 730, total-delete-files -> 0, total-position-deletes -> 0, total-equality-deletes -> 0}|
++-------------------+-----------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+SNAP_BEFORE=3873399174301443112
+Inserted order_id=8888888 with discount_pct=0.05
+SNAP_AFTER=5137975962802803442
+=== CURRENT (latest snapshot) ===
+26/07/17 02:12:58 WARN GarbageCollectionMetrics: To enable non-built-in garbage collector(s) List(G1 Concurrent GC), users should configure it(them) to spark.eventLog.gcMetrics.youngGenerationGarbageCollectors or spark.eventLog.gcMetrics.oldGenerationGarbageCollectors
++---------+-------------------+
+|row_count|              total|
++---------+-------------------+
+|  1200001|1.665838790520001E9|
++---------+-------------------+
+
+=== AS OF SNAP_BEFORE (snapshot 3873399174301443112) ===
++---------+--------------------+
+|row_count|               total|
++---------+--------------------+
+|  1200000|1.6658386905300007E9|
++---------+--------------------+
+
+=== AS OF TIMESTAMP 2026-07-15 09:17:20.833000 ===
++---------+
+|row_count|
++---------+
+|  1200000|
++---------+
+
+![Time Travel Proof](time_travel_proof.png)
+
+3) Partition Pruning Proof 
+((.venv) )
+gaurav.bhatt@YTK-LAP-112 MINGW64 /d/retail_lakehouse_migration_and_conversational_query_assistant (main)
+$ docker compose exec backend python -m spark_jobs.prove_pruning
+time="2026-07-17T07:47:55+05:45" level=warning msg="D:\\retail_lakehouse_migration_and_conversational_query_assistant\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+/usr/local/lib/python3.12/site-packages/pyspark/bin/load-spark-env.sh: line 68: ps: command not found
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC
+Picked up JAVA_TOOL_OPTIONS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -XX:+UseG1GC
+26/07/17 02:02:58 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+=== FULL SCAN (no filter) ===
+== Parsed Logical Plan ==
+'Project [unresolvedalias('SUM('total_amount), None)]
++- 'UnresolvedRelation [nessie, retail, fact_sales], [], false
+
+== Analyzed Logical Plan ==
+sum(total_amount): double
+Aggregate [sum(total_amount#7) AS sum(total_amount)#9]
++- SubqueryAlias nessie.retail.fact_sales
+   +- RelationV2[order_id#0L, order_date#1, product_id#2L, store_id#3L, customer_id#4L, quantity#5, unit_price#6, total_amount#7] nessie.retail.fact_sales nessie.retail.fact_sales
+
+== Optimized Logical Plan ==
+Aggregate [sum(total_amount#7) AS sum(total_amount)#9]
++- RelationV2[total_amount#7] nessie.retail.fact_sales
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[], functions=[sum(total_amount#7)], output=[sum(total_amount)#9])
+   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=11]
+      +- HashAggregate(keys=[], functions=[partial_sum(total_amount#7)], output=[sum#18])
+         +- BatchScan nessie.retail.fact_sales[total_amount#7] nessie.retail.fact_sales (branch=null) [filters=, groupedBy=] RuntimeFilters: []
+
+=== PRUNED (January 2024 only) ===
+== Parsed Logical Plan ==
+'Project [unresolvedalias('SUM('total_amount), None)]
++- 'Filter (('order_date >= 2024-01-01) AND ('order_date <= 2024-01-31))
+   +- 'UnresolvedRelation [nessie, retail, fact_sales], [], false
+
+== Analyzed Logical Plan ==
+sum(total_amount): double
+Aggregate [sum(total_amount#26) AS sum(total_amount)#33]
++- Filter ((order_date#20 >= cast(2024-01-01 as date)) AND (order_date#20 <= cast(2024-01-31 as date)))
+   +- SubqueryAlias nessie.retail.fact_sales
+      +- RelationV2[order_id#19L, order_date#20, product_id#21L, store_id#22L, customer_id#23L, quantity#24, unit_price#25, total_amount#26] nessie.retail.fact_sales nessie.retail.fact_sales    
+
+== Optimized Logical Plan ==
+Aggregate [sum(total_amount#26) AS sum(total_amount)#33]
++- Project [total_amount#26]
+   +- RelationV2[order_date#20, total_amount#26] nessie.retail.fact_sales
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[], functions=[sum(total_amount#26)], output=[sum(total_amount)#33])
+   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=26]
+      +- HashAggregate(keys=[], functions=[partial_sum(total_amount#26)], output=[sum#38])
+         +- Project [total_amount#26]
+            +- BatchScan nessie.retail.fact_sales[order_date#20, total_amount#26] nessie.retail.fact_sales (branch=null) [filters=order_date IS NOT NULL, order_date >= 19723, order_date <= 19753, groupedBy=] RuntimeFilters: []
+
+   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=26]
+      +- HashAggregate(keys=[], functions=[partial_sum(total_amount#26)], output=[sum#38])
+         +- Project [total_amount#26]
+            +- BatchScan nessie.retail.fact_sales[order_date#20, total_amount#26] nessie.retail.fact_sales (branch=null) [filters=order_date IS NOT NULL, order_date >= 19723, order_date <= 19753, groupedBy=] RuntimeFilters: []
+   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=26]
+      +- HashAggregate(keys=[], functions=[partial_sum(total_amount#26)], output=[sum#38])
+         +- Project [total_amount#26]
+            +- BatchScan nessie.retail.fact_sales[order_date#20, total_amount#26] nessie.retail.fact_sales (branch=null) [filters=order_date IS NOT NULL, order_date >= 19723, order_date <= 19753   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=26]
+      +- HashAggregate(keys=[], functions=[partial_sum(total_amount#26)], output=[sum#38])
+         +- Project [total_amount#26]
+   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=26]
+   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=26]
+      +- HashAggregate(keys=[], functions=[partial_sum(total_amount#26)], output=[sum#38])
+         +- Project [total_amount#26]
+            +- BatchScan nessie.retail.fact_sales[order_date#20, total_amount#26] nessie.retail.fact_sales (branch=null) [filters=order_date IS NOT NULL, order_date >= 19723, order_date <= 19753, groupedBy=] RuntimeFilters: []
+
+=== FILE COUNTS (from Iceberg metadata) ===
+26/07/17 02:03:12 WARN GarbageCollectionMetrics: To enable non-built-in garbage collector(s) List(G1 Concurrent GC), users should configure it(them) to spark.eventLog.gcMetrics.youngGenerationGarbageCollectors or spark.eventLog.gcMetrics.oldGenerationGarbageCollectors
++-----------+
+|total_files|
++-----------+
+|        730|
++-----------+
+
++------------+
+|pruned_files|
++------------+
+|          31|
++------------+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ->spark_session.py:
 A few notes on what changed:
 
