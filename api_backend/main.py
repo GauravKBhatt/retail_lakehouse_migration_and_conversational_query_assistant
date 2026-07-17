@@ -62,7 +62,7 @@ GROQ_TOOLS = [
                 "properties": {
                     "sql": {"type": "string", "description": "SQL query to execute"},
                     "as_of_date": {"type": "string", "description": "Date for time travel (YYYY-MM-DD format)"},
-                    "snapshot_id": {"type": "string", "description": "Snapshot ID for time travel"}
+                    "snapshot_id": {"type": "string", "description": "Snapshot ID for time travel (pass as string to preserve precision)"}
                 },
                 "required": ["sql"]
             }
