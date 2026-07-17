@@ -143,7 +143,7 @@ retail_lakehouse_migration_and_conversational_query_assistant/
 
 ## Architecture
 
-![Architecture](image_proofs/architecture.png)
+![Architecture](image_proofs/architecture.svg)
 
 The system has 8 layers:
 

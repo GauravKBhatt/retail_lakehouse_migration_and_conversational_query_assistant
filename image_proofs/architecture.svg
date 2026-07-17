@@ -1,0 +1,261 @@
+<svg viewBox="0 0 1300 1790" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    svg {
+      --ink: #1e293b;
+      --critical: #334155;
+      --important: #64748b;
+      --standard: #b8c0cc;
+      --bg: #f8fafc;
+      --card: #ffffff;
+
+      --user: #64748b;      --user-fill: #f1f5f9;      --user-text: #334155;
+      --frontend: #2563eb;  --frontend-fill: #eaf1fd;  --frontend-text: #1d4ed8;
+      --backend: #7c3aed;   --backend-fill: #f2edfd;   --backend-text: #6d28d9;
+      --agent: #d97706;     --agent-fill: #fef3e2;     --agent-text: #b45309;
+      --llm: #059669;       --llm-fill: #e7f7f1;       --llm-text: #047857;
+      --gov: #4f46e5;        --gov-fill: #edecfc;       --gov-text: #4338ca;
+      --data: #dc2626;      --data-fill: #fdeaea;      --data-text: #b91c1c;
+      --storage: #475569;   --storage-fill: #eef1f4;   --storage-text: #334155;
+      --obs: #db2777;       --obs-fill: #fce8f3;       --obs-text: #be185d;
+
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+    }
+
+    .lane-label { font-size: 12px; font-weight: 600; letter-spacing: .02em; fill: var(--ink); opacity: .55; }
+    .title { font-size: 13.5px; font-weight: 600; }
+    .sub-t { font-size: 11.5px; font-weight: 400; opacity: .82; }
+    .legend-t { font-size: 11.5px; fill: #475569; }
+  </style>
+
+  <!-- ============ LANE BACKGROUNDS ============ -->
+  <g opacity="0.5">
+    <rect x="20" y="24"   width="1260" height="96"  rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+    <rect x="20" y="150"  width="1260" height="140" rx="12" fill="#eaf1fd" opacity="0.4" stroke="#dbe6fb"/>
+    <rect x="20" y="316"  width="1260" height="184" rx="12" fill="#f2edfd" opacity="0.4" stroke="#e5defb"/>
+    <rect x="20" y="528"  width="1260" height="140" rx="12" fill="#e7f7f1" opacity="0.4" stroke="#d6f0e4"/>
+    <rect x="20" y="696"  width="1260" height="224" rx="12" fill="#fef3e2" opacity="0.4" stroke="#fbe6c8"/>
+    <rect x="20" y="948"  width="1260" height="172" rx="12" fill="#edecfc" opacity="0.4" stroke="#dedbf8"/>
+    <rect x="20" y="1148" width="1260" height="192" rx="12" fill="#fdeaea" opacity="0.4" stroke="#fad4d4"/>
+    <rect x="20" y="1368" width="1260" height="152" rx="12" fill="#eef1f4" opacity="0.5" stroke="#dde2e7"/>
+    <rect x="20" y="1548" width="1260" height="120" rx="12" fill="#fce8f3" opacity="0.4" stroke="#f8d0e6"/>
+  </g>
+  <text class="lane-label" x="38" y="46">USER</text>
+  <text class="lane-label" x="38" y="172">FRONTEND</text>
+  <text class="lane-label" x="38" y="338">BACKEND API</text>
+  <text class="lane-label" x="38" y="550">LLM PROVIDERS</text>
+  <text class="lane-label" x="38" y="718">AGENT &amp; TOOLS</text>
+  <text class="lane-label" x="38" y="970">GOVERNANCE &amp; SAFETY</text>
+  <text class="lane-label" x="38" y="1170">DATA ENGINE</text>
+  <text class="lane-label" x="38" y="1390">STORAGE</text>
+  <text class="lane-label" x="38" y="1570">OBSERVABILITY</text>
+
+  <!-- ============ CONNECTORS (drawn first, under nodes) ============ -->
+  <g fill="none" stroke-linejoin="round" stroke-linecap="round">
+    <!-- critical path : slate, thick -->
+    <g stroke="var(--critical)">
+      <path d="M810,260 L810,300 L650,300 L650,340" stroke-width="3"/>
+      <path d="M650,400 L650,520 L490,520 L490,540" stroke-width="3"/>
+      <path d="M650,400 L650,520 L810,520 L810,540" stroke-width="3"/>
+      <path d="M190,900 L190,960 L650,960 L650,1030" stroke-width="3"/>
+      <path d="M650,1065 L780,1065" stroke-width="3"/>
+      <path d="M950,1100 L950,1160 L650,1160 L650,1220" stroke-width="3"/>
+      <path d="M650,1280 L650,1290 L505,1290 L505,1300" stroke-width="3"/>
+      <path d="M630,1330 L670,1330" stroke-width="3"/>
+      <path d="M795,1360 L795,1395 L775,1395 L775,1430" stroke-width="3"/>
+    </g>
+    <!-- important path : medium slate -->
+    <g stroke="var(--important)">
+      <path d="M650,100 L650,140 L490,140 L490,180" stroke-width="2"/>
+      <path d="M650,400 L650,410 L505,410 L505,420" stroke-width="2"/>
+      <path d="M490,610 L490,660 L650,660 L650,710" stroke-width="2"/>
+      <path d="M810,610 L810,660 L650,660 L650,710" stroke-width="2"/>
+      <path d="M650,780 L650,800 L190,800 L190,820" stroke-width="2"/>
+      <path d="M950,1030 L950,1015 L930,1015 L930,1000" stroke-width="2"/>
+      <path d="M505,1360 L505,1395 L275,1395 L275,1430" stroke-width="2"/>
+      <path d="M1025,1430 L1025,1410 L1220,1410 L1220,1250 L800,1250" stroke-width="2" stroke-dasharray="6 5"/>
+      <path d="M275,1500 L275,1560 L400,1560 L400,1600" stroke-width="2"/>
+    </g>
+    <!-- standard path : light -->
+    <g stroke="var(--standard)">
+      <path d="M630,220 L670,220" stroke-width="1.6"/>
+      <path d="M650,400 L650,410 L795,410 L795,420" stroke-width="1.6"/>
+      <path d="M650,780 L650,800 L420,800 L420,820" stroke-width="1.6"/>
+      <path d="M650,780 L650,800 L650,800 L650,820" stroke-width="1.6"/>
+      <path d="M650,780 L650,800 L880,800 L880,820" stroke-width="1.6"/>
+      <path d="M650,780 L650,800 L1110,800 L1110,820" stroke-width="1.6"/>
+      <path d="M420,900 L420,940" stroke-width="1.6"/>
+      <path d="M650,900 L650,940" stroke-width="1.6"/>
+      <path d="M880,900 L880,940" stroke-width="1.6"/>
+      <path d="M1110,900 L1110,940" stroke-width="1.6"/>
+      <path d="M420,940 L1110,940" stroke-width="1.6"/>
+      <path d="M1110,940 L1150,940 L1150,1250 L800,1250" stroke-width="1.6"/>
+    </g>
+  </g>
+
+  <!-- ============ NODES ============ -->
+  <!-- USER -->
+  <g>
+    <rect x="540" y="50" width="220" height="50" rx="10" fill="var(--user-fill)" stroke="var(--user)" stroke-width="1.6"/>
+    <text x="650" y="79" text-anchor="middle" class="title" fill="var(--user-text)">User / Browser</text>
+  </g>
+
+  <!-- FRONTEND -->
+  <g>
+    <rect x="350" y="180" width="280" height="80" rx="10" fill="var(--frontend-fill)" stroke="var(--frontend)" stroke-width="2"/>
+    <text x="490" y="212" text-anchor="middle" class="title" fill="var(--frontend-text)">Chat UI</text>
+    <text x="490" y="232" text-anchor="middle" class="sub-t" fill="var(--frontend-text)">Model selector · message display</text>
+  </g>
+  <g>
+    <rect x="670" y="180" width="280" height="80" rx="10" fill="var(--frontend-fill)" stroke="var(--frontend)" stroke-width="2"/>
+    <text x="810" y="212" text-anchor="middle" class="title" fill="var(--frontend-text)">Nginx reverse proxy</text>
+    <text x="810" y="232" text-anchor="middle" class="sub-t" fill="var(--frontend-text)">:5173</text>
+  </g>
+
+  <!-- BACKEND -->
+  <g>
+    <rect x="450" y="340" width="400" height="60" rx="10" fill="var(--backend-fill)" stroke="var(--backend)" stroke-width="3.5"/>
+    <text x="650" y="365" text-anchor="middle" class="title" fill="var(--backend-text)">main.py — FastAPI</text>
+    <text x="650" y="385" text-anchor="middle" class="sub-t" fill="var(--backend-text)">POST /chat · GET /health · GET /logs</text>
+  </g>
+  <g>
+    <rect x="380" y="420" width="250" height="60" rx="10" fill="var(--backend-fill)" stroke="var(--backend)" stroke-width="1.6"/>
+    <text x="505" y="445" text-anchor="middle" class="title" fill="var(--backend-text)">memory.py</text>
+    <text x="505" y="465" text-anchor="middle" class="sub-t" fill="var(--backend-text)">Redis history · 10 turns / 1h TTL</text>
+  </g>
+  <g>
+    <rect x="670" y="420" width="250" height="60" rx="10" fill="var(--backend-fill)" stroke="var(--backend)" stroke-width="1.6"/>
+    <text x="795" y="445" text-anchor="middle" class="title" fill="var(--backend-text)">logger.py</text>
+    <text x="795" y="465" text-anchor="middle" class="sub-t" fill="var(--backend-text)">JSONL + server.log</text>
+  </g>
+
+  <!-- LLM -->
+  <g>
+    <rect x="350" y="540" width="280" height="70" rx="10" fill="var(--llm-fill)" stroke="var(--llm)" stroke-width="2.5"/>
+    <text x="490" y="568" text-anchor="middle" class="title" fill="var(--llm-text)">Gemini</text>
+    <text x="490" y="588" text-anchor="middle" class="sub-t" fill="var(--llm-text)">2.5-flash · 1.5-pro</text>
+  </g>
+  <g>
+    <rect x="670" y="540" width="280" height="70" rx="10" fill="var(--llm-fill)" stroke="var(--llm)" stroke-width="2.5"/>
+    <text x="810" y="568" text-anchor="middle" class="title" fill="var(--llm-text)">Groq</text>
+    <text x="810" y="588" text-anchor="middle" class="sub-t" fill="var(--llm-text)">Llama-4 · Qwen3 · GPT-OSS</text>
+  </g>
+
+  <!-- AGENT / TOOLS -->
+  <g>
+    <rect x="520" y="710" width="260" height="70" rx="10" fill="var(--agent-fill)" stroke="var(--agent)" stroke-width="2.5"/>
+    <text x="650" y="738" text-anchor="middle" class="title" fill="var(--agent-text)">tools/</text>
+    <text x="650" y="758" text-anchor="middle" class="sub-t" fill="var(--agent-text)">Tool dispatch layer</text>
+  </g>
+
+  <g>
+    <rect x="85"   y="820" width="210" height="80" rx="10" fill="var(--agent-fill)" stroke="var(--agent)" stroke-width="2.5"/>
+    <text x="190" y="850" text-anchor="middle" class="title" fill="var(--agent-text)">lakehouse_query.py</text>
+    <text x="190" y="870" text-anchor="middle" class="sub-t" fill="var(--agent-text)">Read-only SQL execution</text>
+  </g>
+  <g>
+    <rect x="315" y="820" width="210" height="80" rx="10" fill="var(--agent-fill)" stroke="var(--agent)" stroke-width="1.6"/>
+    <text x="420" y="850" text-anchor="middle" class="title" fill="var(--agent-text)">time_travel.py</text>
+    <text x="420" y="870" text-anchor="middle" class="sub-t" fill="var(--agent-text)">VERSION AS OF queries</text>
+  </g>
+  <g>
+    <rect x="545" y="820" width="210" height="80" rx="10" fill="var(--agent-fill)" stroke="var(--agent)" stroke-width="1.6"/>
+    <text x="650" y="850" text-anchor="middle" class="title" fill="var(--agent-text)">explain_query.py</text>
+    <text x="650" y="870" text-anchor="middle" class="sub-t" fill="var(--agent-text)">EXPLAIN EXTENDED</text>
+  </g>
+  <g>
+    <rect x="775" y="820" width="210" height="80" rx="10" fill="var(--agent-fill)" stroke="var(--agent)" stroke-width="1.6"/>
+    <text x="880" y="850" text-anchor="middle" class="title" fill="var(--agent-text)">commit_conflict.py</text>
+    <text x="880" y="870" text-anchor="middle" class="sub-t" fill="var(--agent-text)">Conflict diagnosis</text>
+  </g>
+  <g>
+    <rect x="1005" y="820" width="210" height="80" rx="10" fill="var(--agent-fill)" stroke="var(--agent)" stroke-width="1.6"/>
+    <text x="1110" y="850" text-anchor="middle" class="title" fill="var(--agent-text)">audit_query.py</text>
+    <text x="1110" y="870" text-anchor="middle" class="sub-t" fill="var(--agent-text)">Audit log queries</text>
+  </g>
+
+  <!-- GOVERNANCE -->
+  <g>
+    <rect x="520" y="1030" width="260" height="70" rx="10" fill="var(--gov-fill)" stroke="var(--gov)" stroke-width="3.5"/>
+    <text x="650" y="1058" text-anchor="middle" class="title" fill="var(--gov-text)">guard.py</text>
+    <text x="650" y="1078" text-anchor="middle" class="sub-t" fill="var(--gov-text)">SQL safety guard · sqlglot AST</text>
+  </g>
+  <g>
+    <rect x="820" y="1030" width="260" height="70" rx="10" fill="var(--gov-fill)" stroke="var(--gov)" stroke-width="2.5"/>
+    <text x="950" y="1058" text-anchor="middle" class="title" fill="var(--gov-text)">masking.py</text>
+    <text x="950" y="1078" text-anchor="middle" class="sub-t" fill="var(--gov-text)">Column-level masking</text>
+  </g>
+  <g>
+    <rect x="820" y="940" width="220" height="60" rx="10" fill="var(--gov-fill)" stroke="var(--gov)" stroke-width="2.5"/>
+    <text x="930" y="964" text-anchor="middle" class="title" fill="var(--gov-text)">OPA :8181</text>
+    <text x="930" y="983" text-anchor="middle" class="sub-t" fill="var(--gov-text)">policy.rego</text>
+  </g>
+
+  <!-- DATA ENGINE -->
+  <g>
+    <rect x="500" y="1220" width="300" height="60" rx="10" fill="var(--data-fill)" stroke="var(--data)" stroke-width="3.5"/>
+    <text x="650" y="1245" text-anchor="middle" class="title" fill="var(--data-text)">PySpark session</text>
+    <text x="650" y="1264" text-anchor="middle" class="sub-t" fill="var(--data-text)">spark_session.py</text>
+  </g>
+  <g>
+    <rect x="380" y="1300" width="250" height="60" rx="10" fill="var(--data-fill)" stroke="var(--data)" stroke-width="2.5"/>
+    <text x="505" y="1325" text-anchor="middle" class="title" fill="var(--data-text)">Nessie catalog :19120</text>
+    <text x="505" y="1344" text-anchor="middle" class="sub-t" fill="var(--data-text)">JDBC version store</text>
+  </g>
+  <g>
+    <rect x="670" y="1300" width="250" height="60" rx="10" fill="var(--data-fill)" stroke="var(--data)" stroke-width="2.5"/>
+    <text x="795" y="1325" text-anchor="middle" class="title" fill="var(--data-text)">Iceberg tables</text>
+    <text x="795" y="1344" text-anchor="middle" class="sub-t" fill="var(--data-text)">Parquet + Avro metadata</text>
+  </g>
+
+  <!-- STORAGE -->
+  <g>
+    <rect x="165" y="1430" width="220" height="70" rx="10" fill="var(--storage-fill)" stroke="var(--storage)" stroke-width="2"/>
+    <text x="275" y="1458" text-anchor="middle" class="title" fill="var(--storage-text)">PostgreSQL :5432</text>
+    <text x="275" y="1478" text-anchor="middle" class="sub-t" fill="var(--storage-text)">nessie + marquez DBs</text>
+  </g>
+  <g>
+    <rect x="415" y="1430" width="220" height="70" rx="10" fill="var(--storage-fill)" stroke="var(--storage)" stroke-width="1.6"/>
+    <text x="525" y="1458" text-anchor="middle" class="title" fill="var(--storage-text)">Redis :6379</text>
+    <text x="525" y="1478" text-anchor="middle" class="sub-t" fill="var(--storage-text)">Session cache</text>
+  </g>
+  <g>
+    <rect x="665" y="1430" width="220" height="70" rx="10" fill="var(--storage-fill)" stroke="var(--storage)" stroke-width="2"/>
+    <text x="775" y="1458" text-anchor="middle" class="title" fill="var(--storage-text)">Iceberg warehouse</text>
+    <text x="775" y="1478" text-anchor="middle" class="sub-t" fill="var(--storage-text)">On-disk parquet files</text>
+  </g>
+  <g>
+    <rect x="915" y="1430" width="220" height="70" rx="10" fill="var(--storage-fill)" stroke="var(--storage)" stroke-width="1.6"/>
+    <text x="1025" y="1458" text-anchor="middle" class="title" fill="var(--storage-text)">data/</text>
+    <text x="1025" y="1478" text-anchor="middle" class="sub-t" fill="var(--storage-text)">1.2M sales + 4 dimensions</text>
+  </g>
+
+  <!-- OBSERVABILITY -->
+  <g>
+    <rect x="290" y="1600" width="220" height="70" rx="10" fill="var(--obs-fill)" stroke="var(--obs)" stroke-width="1.6"/>
+    <text x="400" y="1628" text-anchor="middle" class="title" fill="var(--obs-text)">Marquez :5000</text>
+    <text x="400" y="1648" text-anchor="middle" class="sub-t" fill="var(--obs-text)">Data lineage</text>
+  </g>
+  <g>
+    <rect x="540" y="1600" width="220" height="70" rx="10" fill="var(--obs-fill)" stroke="var(--obs)" stroke-width="1.6"/>
+    <text x="650" y="1628" text-anchor="middle" class="title" fill="var(--obs-text)">eval/</text>
+    <text x="650" y="1648" text-anchor="middle" class="sub-t" fill="var(--obs-text)">32 test cases</text>
+  </g>
+  <g>
+    <rect x="790" y="1600" width="220" height="70" rx="10" fill="var(--obs-fill)" stroke="var(--obs)" stroke-width="1.6"/>
+    <text x="900" y="1628" text-anchor="middle" class="title" fill="var(--obs-text)">audit.py</text>
+    <text x="900" y="1648" text-anchor="middle" class="sub-t" fill="var(--obs-text)">Iceberg audit log</text>
+  </g>
+
+  <!-- ============ LEGEND ============ -->
+  <g transform="translate(960,40)">
+    <rect x="0" y="0" width="320" height="82" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="14" y1="20" x2="46" y2="20" stroke="var(--critical)" stroke-width="3"/>
+    <text x="54" y="24" class="legend-t">Critical path / component</text>
+    <line x1="14" y1="42" x2="46" y2="42" stroke="var(--important)" stroke-width="2"/>
+    <text x="54" y="46" class="legend-t">Important path / component</text>
+    <line x1="14" y1="64" x2="46" y2="64" stroke="var(--standard)" stroke-width="1.6"/>
+    <text x="54" y="68" class="legend-t">Standard path / component</text>
+  </g>
+
+</svg>
