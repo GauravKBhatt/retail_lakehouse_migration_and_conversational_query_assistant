@@ -4,7 +4,7 @@ from spark_jobs.spark_session import get_spark
 
 NEW_ROW = """
     INSERT INTO nessie.retail.fact_sales
-    VALUES (8888888, CAST('2024-07-01' AS DATE), 2, 2, 2, 1, 99.99, 99.99, 0.05)
+    VALUES (8888888, CAST('2024-07-01' AS DATE), 2, 2, 2, 1, 99.99, 99.99)
 """
 
 COUNT_SUM_QUERY = "SELECT COUNT(*) AS row_count, SUM(total_amount) AS total FROM nessie.retail.fact_sales"
