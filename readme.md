@@ -143,7 +143,7 @@ retail_lakehouse_migration_and_conversational_query_assistant/
 
 ## Architecture
 
-![Architecture](architecture.html)
+![Architecture](image_proofs/architecture.png)
 
 The system has 8 layers:
 
@@ -234,7 +234,7 @@ Redis stores the last 10 turns (20 messages) per session with a 1-hour TTL. Hist
 
 Every interaction is logged to `nessie.retail.audit_log` (Iceberg table partitioned by `days(timestamp)`): user role, model, question, generated SQL, snapshot ID, execution time, and answer.
 
-![Audit Logging](image_proofs/audit_logging.png)
+![Audit Logging](image_proofs/audit_log.png)
 
 ### Evaluation Harness
 
