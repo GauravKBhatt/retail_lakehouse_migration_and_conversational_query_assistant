@@ -161,6 +161,24 @@ The system has 8 layers:
 
 ---
 
+## Data Model
+
+![Data Model](image_proofs/data_model.drawio.png)
+
+Star schema with one fact table and four dimensions. No foreign key constraints are enforced at the database level — referential integrity is guaranteed by the data generator, which produces FK values within the exact same ID ranges as the dimension primary keys.
+
+| Table | Type | Key Columns | Partitioning |
+|-------|------|-------------|-------------|
+| `fact_sales` | Fact | `order_id` (PK), `product_id` (FK), `store_id` (FK), `customer_id` (FK), `order_date` | `days(order_date)` |
+| `dim_product` | Dimension | `product_id` (PK), `name`, `category`, `brand`, `cost_price` | None |
+| `dim_store` | Dimension | `store_id` (PK), `name`, `city`, `state`, `region` | None |
+| `dim_customer` | Dimension | `customer_id` (PK), `segment`, `join_date`, `lifetime_value_bucket` | None |
+| `dim_date` | Dimension | `date_id` (PK), `full_date`, `year`, `quarter`, `month` | None |
+
+Logical joins: `fact_sales.product_id → dim_product.product_id`, `fact_sales.store_id → dim_store.store_id`, `fact_sales.customer_id → dim_customer.customer_id`, `fact_sales.order_date → dim_date.full_date`.
+
+---
+
 ## Features
 
 ### Conversational SQL Agent
