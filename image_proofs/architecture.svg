@@ -212,7 +212,7 @@
   <g>
     <rect x="165" y="1430" width="220" height="70" rx="10" fill="var(--storage-fill)" stroke="var(--storage)" stroke-width="2"/>
     <text x="275" y="1458" text-anchor="middle" class="title" fill="var(--storage-text)">PostgreSQL :5432</text>
-    <text x="275" y="1478" text-anchor="middle" class="sub-t" fill="var(--storage-text)">nessie + marquez DBs</text>
+    <text x="275" y="1478" text-anchor="middle" class="sub-t" fill="var(--storage-text)">Nessie DB</text>
   </g>
   <g>
     <rect x="415" y="1430" width="220" height="70" rx="10" fill="var(--storage-fill)" stroke="var(--storage)" stroke-width="1.6"/>
@@ -232,19 +232,14 @@
 
   <!-- OBSERVABILITY -->
   <g>
-    <rect x="290" y="1600" width="220" height="70" rx="10" fill="var(--obs-fill)" stroke="var(--obs)" stroke-width="1.6"/>
-    <text x="400" y="1628" text-anchor="middle" class="title" fill="var(--obs-text)">Marquez :5000</text>
-    <text x="400" y="1648" text-anchor="middle" class="sub-t" fill="var(--obs-text)">Data lineage</text>
+    <rect x="415" y="1600" width="220" height="70" rx="10" fill="var(--obs-fill)" stroke="var(--obs)" stroke-width="1.6"/>
+    <text x="525" y="1628" text-anchor="middle" class="title" fill="var(--obs-text)">eval/</text>
+    <text x="525" y="1648" text-anchor="middle" class="sub-t" fill="var(--obs-text)">32 test cases</text>
   </g>
   <g>
-    <rect x="540" y="1600" width="220" height="70" rx="10" fill="var(--obs-fill)" stroke="var(--obs)" stroke-width="1.6"/>
-    <text x="650" y="1628" text-anchor="middle" class="title" fill="var(--obs-text)">eval/</text>
-    <text x="650" y="1648" text-anchor="middle" class="sub-t" fill="var(--obs-text)">32 test cases</text>
-  </g>
-  <g>
-    <rect x="790" y="1600" width="220" height="70" rx="10" fill="var(--obs-fill)" stroke="var(--obs)" stroke-width="1.6"/>
-    <text x="900" y="1628" text-anchor="middle" class="title" fill="var(--obs-text)">audit.py</text>
-    <text x="900" y="1648" text-anchor="middle" class="sub-t" fill="var(--obs-text)">Iceberg audit log</text>
+    <rect x="665" y="1600" width="220" height="70" rx="10" fill="var(--obs-fill)" stroke="var(--obs)" stroke-width="1.6"/>
+    <text x="775" y="1628" text-anchor="middle" class="title" fill="var(--obs-text)">audit.py</text>
+    <text x="775" y="1648" text-anchor="middle" class="sub-t" fill="var(--obs-text)">Iceberg audit log</text>
   </g>
 
   <!-- ============ LEGEND ============ -->

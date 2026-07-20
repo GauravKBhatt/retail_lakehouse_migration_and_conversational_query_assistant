@@ -132,7 +132,7 @@ retail_lakehouse_migration_and_conversational_query_assistant/
 │   ├── time_travel.py              # Snapshot capture + time travel demo
 │   ├── seed_conflicts.py           # Seeds synthetic conflict records
 │   └── audit_trail.py              # Creates audit_log table
-├── docker-compose.yml              # 7 services (Nessie, Redis, Postgres, Marquez, OPA, backend, frontend)
+├── docker-compose.yml              # 6 services (Nessie, Redis, Postgres, OPA, backend, frontend)
 ├── Dockerfile.backend              # Python 3.12 + JRE + pip install
 ├── requirements.txt                # Python dependencies
 ├── .env.example                    # Required env vars template
@@ -145,7 +145,7 @@ retail_lakehouse_migration_and_conversational_query_assistant/
 
 ![Architecture](image_proofs/architecture.svg)
 
-The system has 8 layers:
+The system has 7 layers:
 
 | Layer | Components | Purpose |
 |-------|-----------|---------|
@@ -157,7 +157,7 @@ The system has 8 layers:
 | **Governance** | OPA (`policy.rego`) + `masking.py` + `guard.py` | Column-level masking, SQL safety (blocks DDL/DML) |
 | **Data Engine** | PySpark + Nessie catalog + Iceberg tables | Spark SQL execution, Git-like catalog versioning, Parquet storage |
 | **Storage** | PostgreSQL, Redis, Iceberg warehouse, CSV data | Metadata, session cache, on-disk Parquet, source data |
-| **Observability** | Marquez (lineage), `eval/` (32 test cases), audit_log (Iceberg) | Data lineage, automated testing, query audit trail |
+| **Observability** | `eval/` (32 test cases), audit_log (Iceberg) | Automated testing, query audit trail |
 
 ---
 
@@ -264,6 +264,49 @@ python -m eval.eval_runner --model gemini-2.5-flash --category lakehouse_query
 
 ---
 
+## Demo Script
+
+Try these questions in the chat UI at `http://localhost:5173` to see the agent in action. Switch between models using the dropdown to compare responses.
+
+### Basic Queries
+
+| # | Question | Expected Behavior |
+|---|----------|-------------------|
+| 1 | "What are the total sales for 2024?" | `run_lakehouse_query` → `SELECT SUM(total_amount) FROM nessie.retail.fact_sales` with date filter |
+| 2 | "Which store had the highest revenue last month?" | JOINs `fact_sales` + `dim_store`, groups by store, orders by sum desc |
+| 3 | "How many customers are in the VIP segment?" | Queries `dim_customer` with `WHERE lifetime_value_bucket = 'VIP'` |
+| 4 | "Show me the top 5 product categories by quantity sold" | JOINs `fact_sales` + `dim_product`, groups by category, limits 5 |
+
+### Date-Range & Time Travel
+
+| # | Question | Expected Behavior |
+|---|----------|-------------------|
+| 5 | "What were sales in January 2024 only?" | Filters `order_date BETWEEN '2024-01-01' AND '2024-01-31'` — triggers partition pruning |
+| 6 | "Show me sales as of July 15, 2026" | `run_time_travel_query` → injects `VERSION AS OF` or `TIMESTAMP AS OF` |
+
+### Query Analysis
+
+| # | Question | Expected Behavior |
+|---|----------|-------------------|
+| 7 | "Why is this query slow: SELECT * FROM nessie.retail.fact_sales" | `explain_query_plan` → returns full-scan warning with file counts |
+| 8 | "Explain the plan for total sales by region" | `explain_query_plan` → shows JOIN + GROUP BY execution details |
+
+### Governance & Scope
+
+| # | Question | Expected Behavior |
+|---|----------|-------------------|
+| 9 | "What is the capital of Nepal?" | Refused — agent responds with the out-of-scope message |
+| 10 | "DROP TABLE fact_sales" | Fist of all LLM never agrees to do that even if it does then that is blocked by SQL guard — returns safety error, query never executes |
+
+### Multi-Model Comparison
+
+Pick the same question and switch models to compare:
+
+1. "Show me monthly revenue trends for 2024" — try with **Gemini 2.5 Flash** vs **Llama 4 Scout** vs **Qwen3-32B**
+2. Notice differences in SQL generation, response speed, and explanation quality
+
+---
+
 ## Recreating the Project
 
 ### Prerequisites
@@ -292,7 +335,7 @@ GROQ_API_KEY=your_key_here
 ### Step 2: Start Infrastructure
 
 ```bash
-docker compose up -d nessie postgres redis opa marquez
+docker compose up -d nessie postgres redis opa
 ```
 
 Wait for Postgres health check to pass (~10s).
@@ -373,3 +416,66 @@ Gemini offers native function calling with structured tool declarations. Groq of
 ### Why Redis for Conversation Memory?
 
 Redis provides TTL-based expiry (1 hour) and list-based storage (append/pop semantics) that maps naturally to chat history. The alternative — storing history in the Iceberg audit log — would require a query on every request and wouldn't expire automatically. Redis keeps hot data fast and cold data gone.
+
+---
+
+## Challenges & Learnings
+
+### 1. PySpark Threading Crashes
+
+Concurrent HTTP requests to the FastAPI backend triggered parallel `spark.sql()` calls on the same SparkSession. PySpark is not thread-safe — this caused random worker crashes and corrupted internal state. Fixed by adding a `threading.Lock` (`_spark_lock`) around every Spark SQL call across all agent tools and audit logging. In hindsight, a single `safe_sql()` wrapper in `spark_session.py` would have been cleaner than patching every file individually.
+
+### 2. JVM Memory / OOM Kills Inside Docker
+
+The Spark driver kept getting OOM-killed inside the container. The root cause: `spark.conf.set("spark.driver.memory", ...)` was called *after* `SparkSession.builder.getOrCreate()`, but Py4J launches the JVM at `getOrCreate()` — so the memory config arrived too late. Fixed by moving memory settings to the `JAVA_TOOL_OPTIONS` environment variable (`-XX:MaxRAMPercentage=50.0`) and reducing the default from 4g to 2g to fit within the container's resource limits.
+
+### 3. Nessie Lost All Data on Restart
+
+Nessie was initially configured with in-memory storage. Every `docker compose down` wiped the entire Iceberg catalog — tables, snapshots, branches gone. Fixed by switching Nessie to JDBC persistence backed by the existing Postgres container.
+
+### 4. Groq JSON Parsing Failures
+
+Groq models (Llama, Qwen) sometimes returned malformed JSON in tool call arguments via the OpenAI-compatible API. This broke the function-calling loop silently — the backend would crash with a `json.loads` error. Fixed by adding defensive JSON parsing with try/except fallback and preprocessing of common malformed patterns (trailing commas, unquoted keys).
+
+### 5. Groq Models Ignoring the System Prompt
+
+Groq models weren't respecting the system prompt because it wasn't being passed in the format they expected. The OpenAI-compatible API requires the system message as the first entry in the messages array, not as a separate parameter. Fixed by explicitly prepending `{"role": "system", "content": SYSTEM_PROMPT}` to the message history before every Groq API call.
+
+### 6. DataFrame API Crash on Windows
+
+PySpark's DataFrame write API (`.writeTo().append()`) crashed on Windows workers due to path handling and file locking issues. Fixed by switching to `spark.sql("INSERT INTO ...")` which delegates the write to Spark's SQL engine and avoids the Python-side file operations.
+
+### 7. Audit Table Nullable Fields
+
+The `audit_log` table insert failed intermittently because fields like `generated_sql` and `snapshot_id` could be NULL, but the DataFrame schema didn't reflect that. Fixed by defining an explicit `StructType` schema with nullable flags for every field in `audit.py`.
+
+### 8. sqlglot Version Upgrade Broke AST Rewriting
+
+A sqlglot minor version upgrade (v30) changed internal AST node types and function signatures, breaking both the SQL safety guard and the masking engine. Additionally, the masking engine was wrapping masked columns in `SHA2(col, 256)` directly, which failed for non-string columns like `customer_id` (BIGINT). Fixed by pinning the sqlglot version, adding `CAST(col AS TEXT)` before `SHA2`, and preserving table qualifiers (e.g., `nessie.retail.`) during AST rewriting.
+
+### 9. Deprecated Model Names
+
+Provider model names kept getting deprecated (e.g., Gemini and Groq model version bumps). Each deployment required updating both the backend `MODELS` config and the frontend dropdown options. This happened multiple times throughout development — a reminder that external API dependencies are a moving target.
+
+### What I'd Do Differently
+
+- **Test inside Docker from day one.** The Nessie persistence, JVM memory, and OPA URL issues all stemmed from developing locally first and containerizing later.
+- **Pin all dependency versions.** The sqlglot v30 breakage was avoidable with a pinned version in `requirements.txt`.
+- **Build a thread-safe Spark wrapper upfront.** Instead of adding locks to every file, a single `safe_sql()` function in `spark_session.py` would have reduced duplication.
+- **Defend against malformed LLM output from the start.** The Groq JSON parsing issues were predictable — the OpenAI-compatible format is less strict than Gemini's native function calling, so the parsing layer should have assumed bad input from day one.
+
+### 10. Extras beyond the core requirements
+
+- Groq as a second LLM provider (5 additional models)
+- OPA-based column-level masking with role-based policies
+- SQL safety guard (AST-based DDL/DML blocking via sqlglot)
+- Redis conversation memory with TTL
+- Audit logging to Iceberg table
+- 32-case automated evaluation harness
+- Query plan explainer tool
+- Commit conflict diagnosis tool
+- Audit log query tool
+- Multi-model frontend dropdown (7 models)
+- Live log viewer in the frontend
+- Scope restriction (system prompt blocks non-database questions)
+- Docker Compose with 6 services (Nessie, Redis, Postgres, OPA, backend, frontend)

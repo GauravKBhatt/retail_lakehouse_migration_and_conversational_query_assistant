@@ -35,22 +35,6 @@ services:
       timeout: 5s
       retries: 5
 
-  marquez:
-    image: marquezproject/marquez:latest
-    ports:
-      - "5000:5000"
-      - "5001:5001"
-    environment:
-      MARQUEZ_CONFIG: /usr/src/app/config.yml
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    entrypoint: ["/bin/bash", "/usr/src/app/entrypoint.sh"]
-    volumes:
-      - ./marquez/config.yml:/usr/src/app/config.yml
-      - ./marquez/entrypoint.sh:/usr/src/app/entrypoint.sh
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   opa:
     image: openpolicyagent/opa:0.68.0
     command: run --server --addr 0.0.0.0:8181 /policies/policy.rego
