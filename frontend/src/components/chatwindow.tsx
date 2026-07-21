@@ -1,6 +1,8 @@
 import { useAtom } from 'jotai'
 import { isTypingAtom } from '../atoms'
 import type { Message } from '../hooks/useChat'
+import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface ChatWindowProps {
   messages: Message[]
@@ -8,67 +10,6 @@ interface ChatWindowProps {
 
 export function ChatWindow({ messages }: ChatWindowProps) {
   const [isTyping] = useAtom(isTypingAtom)
-
-  const formatMessage = (content: string) => {
-    const sqlRegex = /SELECT.*?FROM.*?(?:;|$)/gis
-    const parts = content.split(sqlRegex)
-    const matches = content.match(sqlRegex) || []
-    
-    const renderTable = (text: string) => {
-      const lines = text.trim().split('\n').filter(line => line.trim())
-      if (lines.length < 2) return <p className="whitespace-pre-wrap">{text}</p>
-      
-      // Check if it looks like a table (has pipe separators)
-      const hasPipes = lines.some(line => line.includes('|'))
-      if (!hasPipes) return <p className="whitespace-pre-wrap">{text}</p>
-      
-      const rows = lines.map(line => 
-        line.split('|').map(cell => cell.trim()).filter(cell => cell)
-      )
-      
-      if (rows.length < 2 || rows.some(row => row.length === 0)) {
-        return <p className="whitespace-pre-wrap">{text}</p>
-      }
-      
-      return (
-        <div className="overflow-x-auto mt-3 mb-3">
-          <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
-            <thead className="bg-gray-50">
-              <tr>
-                {rows[0].map((cell, i) => (
-                  <th key={i} className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">
-                    {cell}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {rows.slice(1).map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-gray-50">
-                  {row.map((cell, cellIndex) => (
-                    <td key={cellIndex} className="px-4 py-2 text-sm text-gray-900 whitespace-nowrap">
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-    
-    return parts.map((part, i) => (
-      <span key={i}>
-        {renderTable(part)}
-        {matches[i] && (
-          <pre className="bg-gray-900 text-[#FFA62B] p-3 rounded-lg mt-2 mb-2 overflow-x-auto text-sm leading-relaxed">
-            <code>{matches[i]}</code>
-          </pre>
-        )}
-      </span>
-    ))
-  }
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
@@ -104,7 +45,96 @@ export function ChatWindow({ messages }: ChatWindowProps) {
                 : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm shadow-sm'
             }`}
           >
-            {msg.role === 'assistant' ? formatMessage(msg.content) : msg.content}
+            {msg.role === 'assistant' ? (
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ children }) => (
+                    <h1 className="text-xl font-bold text-gray-900 mt-3 mb-2">{children}</h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-lg font-bold text-gray-900 mt-3 mb-2">{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-base font-semibold text-gray-900 mt-2 mb-1">{children}</h3>
+                  ),
+                  p: ({ children }) => (
+                    <p className="text-sm text-gray-800 leading-relaxed mb-2 last:mb-0">{children}</p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="list-disc list-inside text-sm text-gray-800 space-y-1 mb-2">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="list-decimal list-inside text-sm text-gray-800 space-y-1 mb-2">{children}</ol>
+                  ),
+                  li: ({ children }) => (
+                    <li className="text-sm text-gray-800">{children}</li>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-gray-900">{children}</strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="italic text-gray-700">{children}</em>
+                  ),
+                  code: ({ className, children }) => {
+                    const isInline = !className
+                    if (isInline) {
+                      return (
+                        <code className="bg-gray-100 text-teal-700 px-1.5 py-0.5 rounded text-xs font-mono">
+                          {children}
+                        </code>
+                      )
+                    }
+                    return (
+                      <code className={`${className ?? ''} block`}>{children}</code>
+                    )
+                  },
+                  pre: ({ children }) => (
+                    <pre className="bg-gray-900 text-[#FFA62B] p-3 rounded-lg mt-2 mb-2 overflow-x-auto text-sm leading-relaxed font-mono">
+                      {children}
+                    </pre>
+                  ),
+                  table: ({ children }) => (
+                    <div className="overflow-x-auto mt-3 mb-3">
+                      <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  thead: ({ children }) => (
+                    <thead className="bg-gray-50">{children}</thead>
+                  ),
+                  tbody: ({ children }) => (
+                    <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>
+                  ),
+                  th: ({ children }) => (
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b">
+                      {children}
+                    </th>
+                  ),
+                  td: ({ children }) => (
+                    <td className="px-4 py-2 text-sm text-gray-900 whitespace-nowrap">{children}</td>
+                  ),
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-teal-400 pl-3 italic text-gray-600 my-2">
+                      {children}
+                    </blockquote>
+                  ),
+                  a: ({ href, children }) => (
+                    <a href={href} className="text-teal-600 underline hover:text-teal-800" target="_blank" rel="noopener noreferrer">
+                      {children}
+                    </a>
+                  ),
+                  hr: () => (
+                    <hr className="border-gray-200 my-3" />
+                  ),
+                }}
+              >
+                {msg.content}
+              </Markdown>
+            ) : (
+              msg.content
+            )}
           </div>
         </div>
       ))}
