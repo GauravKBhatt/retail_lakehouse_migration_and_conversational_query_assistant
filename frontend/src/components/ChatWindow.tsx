@@ -3,6 +3,7 @@ import { isTypingAtom } from '../atoms'
 import type { Message } from '../hooks/useChat'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 
 interface ChatWindowProps {
   messages: Message[]
@@ -48,6 +49,7 @@ export function ChatWindow({ messages }: ChatWindowProps) {
             {msg.role === 'assistant' ? (
               <Markdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
                 components={{
                   h1: ({ children }) => (
                     <h1 className="text-xl font-bold text-gray-900 mt-3 mb-2">{children}</h1>
